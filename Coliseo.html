@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recreación Estilo Mazzanti - Three.js</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050510; font-family: sans-serif; transition: background-color 1s ease; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { margin: 0 0 5px 0; font-size: 1.2rem; color: #333; }
+        p { margin: 0; font-size: 0.9rem; color: #666; }
+        #toggle-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.3s ease;
+        }
+        #toggle-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+    </style>
+    <!-- Importamos Three.js desde CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="info">
+        <h1>Escenarios Deportivos / Estilo Mazzanti</h1>
+        <p>Modo: Noche.<br>Plateado visible de noche.<br>Luminarias internas potentes.<br>Click y arrastra para rotar.</p>
+    </div>
+    <button id="toggle-btn">Cambiar a Día</button>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        let isNight = true;
+
+        // --- 1. CONFIGURACIÓN BÁSICA ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510); // Inicialmente noche
+
+        // Mapa de entorno para reflejos realistas
+        const pmremGenerator = new THREE.PMREMGenerator(new THREE.WebGLRenderer());
+        pmremGenerator.compileEquirectangularShader();
+        const neutralEnvMap = pmremGenerator.fromScene(new THREE.Scene()).texture; // Entorno neutro simple
+        scene.environment = neutralEnvMap;
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(75, 35, 95); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+        // --- 2. ILUMINACIÓN ---
+        
+        // Luz ambiental
+        const ambientLight = new THREE.AmbientLight(0x111133, 0.4); 
+        scene.add(ambientLight);
+
+        // Luz Principal (Sol/Luna)
+        const mainLight = new THREE.DirectionalLight(0x88aaff, 0.6);
+        mainLight.position.set(-50, 80, -30);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
+        const d = 100;
+        mainLight.shadow.camera.left = -d;
+        mainLight.shadow.camera.right = d;
+        mainLight.shadow.camera.top = d;
+        mainLight.shadow.camera.bottom = -d;
+        scene.add(mainLight);
+
+        // Luz de relleno (opcional para día)
+        const fillLight = new THREE.DirectionalLight(0xddeeff, 0.0);
+        fillLight.position.set(30, 20, 30);
+        scene.add(fillLight);
+
+        // --- 3. SUELO ---
+        const planeGeometry = new THREE.PlaneGeometry(350, 350);
+        const planeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x1a1a2a, // Color base oscuro
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotation.x = -Math.PI / 2;
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        const gridHelper = new THREE.GridHelper(350, 70, 0x333344, 0x222233);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        // --- 4. FUNCIONES DE GEOMETRÍA ---
+        function createRibbon(zPos, index, width) {
+            const organicNoise = Math.sin(index * 0.6) * 3.5; 
+            const randomVar = (Math.random() - 0.5) * 3.0; 
+            const hGround = 0;
+            const hShoulder = 8 + Math.random() * 1.5;
+            const hPeakBase = 20;
+            const hActualPeak = hPeakBase + organicNoise + randomVar;
+            const hLowSide = hActualPeak * 0.55; 
+            const isLeftLeaning = index % 2 === 0;
+            const peakShift = 14; 
+
+            let xPeak, xSlopeMid;
+            if (isLeftLeaning) {
+                xPeak = -peakShift + randomVar * 0.5;
+                xSlopeMid = 8; 
+            } else {
+                xPeak = peakShift + randomVar * 0.5;
+                xSlopeMid = -8;
+            }
+
+            const points = [];
+            points.push(new THREE.Vector3(-28, hGround, zPos)); 
+            points.push(new THREE.Vector3(-24, hShoulder, zPos));
+            if (isLeftLeaning) {
+                points.push(new THREE.Vector3(xPeak, hActualPeak, zPos));
+                points.push(new THREE.Vector3(xSlopeMid, hActualPeak * 0.8, zPos)); 
+                points.push(new THREE.Vector3(16, hLowSide, zPos));
+            } else {
+                points.push(new THREE.Vector3(-16, hLowSide, zPos));
+                points.push(new THREE.Vector3(xSlopeMid, hActualPeak * 0.8, zPos));
+                points.push(new THREE.Vector3(xPeak, hActualPeak, zPos));
+            }
+            points.push(new THREE.Vector3(24, hShoulder, zPos));
+            points.push(new THREE.Vector3(28, hGround, zPos));
+
+            const arcPath = new THREE.CatmullRomCurve3(points);
+            arcPath.tension = 0.45; 
+            
+            const shapeWidth = width - 0.3;
+            const shapeThickness = 0.9;     
+            const shape = new THREE.Shape();
+            shape.moveTo(-shapeWidth/2, -shapeThickness/2);
+            shape.lineTo( shapeWidth/2, -shapeThickness/2);
+            shape.lineTo( shapeWidth/2,  shapeThickness/2);
+            shape.lineTo(-shapeWidth/2,  shapeThickness/2);
+            shape.lineTo(-shapeWidth/2, -shapeThickness/2);
+
+            const extrudeSettings = {
+                steps: 70, 
+                bevelEnabled: false,
+                extrudePath: arcPath
+            };
+            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            
+            const lightPoint1 = arcPath.getPoint(0.35);
+            const lightPoint2 = arcPath.getPoint(0.65);
+
+            return { geometry, curve: arcPath, lightPoints: [lightPoint1, lightPoint2] };
+        }
+
+        // --- FUNCIÓN FACHADA ---
+        function createFacade(zPos, curve3D) {
+            const facadeGroup = new THREE.Group();
+            const divisions = 100; 
+            const points3D = curve3D.getPoints(divisions);
+            
+            const shapePoints = points3D.map(p => new THREE.Vector2(p.x, p.y));
+            if (shapePoints[0].y > 0.1) shapePoints.unshift(new THREE.Vector2(shapePoints[0].x, 0));
+            if (shapePoints[shapePoints.length-1].y > 0.1) shapePoints.push(new THREE.Vector2(shapePoints[shapePoints.length-1].x, 0));
+            const shape = new THREE.Shape(shapePoints);
+            
+            // Vidrio más claro y transparente
+            const glassGeo = new THREE.ShapeGeometry(shape);
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, // Blanco puro
+                metalness: 0.1,
+                roughness: 0.05,
+                transmission: 0.9, // Muy transparente
+                transparent: true,
+                thickness: 0.5,
+                side: THREE.DoubleSide,
+                reflectivity: 0.9,
+                ior: 1.5
+            });
+            const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+            glassMesh.position.z = zPos;
+            facadeGroup.add(glassMesh);
+            
+            // Estructura metálica clara
+            const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.4, metalness: 0.7 });
+            const verticalSpacing = 4.0;
+            const horizontalSpacing = 4.0; 
+            const mullionThickness = 0.25;
+
+            function getYAtX(targetX, pts) {
+                for (let i = 0; i < pts.length - 1; i++) {
+                    const p1 = pts[i];
+                    const p2 = pts[i+1];
+                    if ((p1.x <= targetX && p2.x >= targetX)) {
+                        const t = (targetX - p1.x) / (p2.x - p1.x);
+                        return p1.y + t * (p2.y - p1.y);
+                    }
+                }
+                return 0;
+            }
+            const minX = -28; const maxX = 28;
+            for (let x = minX + 2; x < maxX; x += verticalSpacing) {
+                const heightAtX = getYAtX(x, points3D);
+                if (heightAtX > 1) {
+                    const geo = new THREE.BoxGeometry(mullionThickness, heightAtX, mullionThickness);
+                    const mesh = new THREE.Mesh(geo, frameMaterial);
+                    mesh.position.set(x, heightAtX / 2, zPos);
+                    facadeGroup.add(mesh);
+                }
+            }
+            const maxHeight = 30; 
+            for (let y = horizontalSpacing; y < maxHeight; y += horizontalSpacing) {
+                let intersections = [];
+                for(let i=0; i<points3D.length-1; i++) {
+                     if ((points3D[i].y <= y && points3D[i+1].y >= y) || (points3D[i].y >= y && points3D[i+1].y <= y)) {
+                         const t = (y - points3D[i].y) / (points3D[i+1].y - points3D[i].y);
+                         intersections.push(points3D[i].x + t * (points3D[i+1].x - points3D[i].x));
+                     }
+                }
+                intersections.sort((a,b) => a-b);
+                if (intersections.length >= 2) {
+                    const startX = intersections[0];
+                    const endX = intersections[intersections.length-1];
+                    const width = endX - startX;
+                    const geo = new THREE.BoxGeometry(width, mullionThickness, mullionThickness);
+                    const mesh = new THREE.Mesh(geo, frameMaterial);
+                    mesh.position.set(startX + width/2, y, zPos);
+                    facadeGroup.add(mesh);
+                }
+            }
+            const borderPath = new THREE.CatmullRomCurve3(points3D.map(p => new THREE.Vector3(p.x, p.y, zPos)));
+            const borderGeo = new THREE.TubeGeometry(borderPath, 100, 0.3, 4, false);
+            const borderMesh = new THREE.Mesh(borderGeo, frameMaterial);
+            facadeGroup.add(borderMesh);
+            return facadeGroup;
+        }
+
+        // --- MATERIALES ---
+        // Material Metálico Plateado Claro y Sólido
+        const metalRoofMaterial = new THREE.MeshStandardMaterial({
+            color: 0xe0e0e0, // Plateado muy claro
+            roughness: 0.2,  // Pulido
+            metalness: 0.9,  // Muy reflectante
+            side: THREE.DoubleSide,
+            envMapIntensity: 1.0, // Intensidad del reflejo del entorno
+            // AÑADIDO: Emisivo para que no se vea negro de noche
+            emissive: 0x333333, 
+        });
+
+        const trussMaterial = new THREE.LineBasicMaterial({
+            color: 0xaaaaaa, // Estructura interna más clara
+            linewidth: 1,
+            opacity: 0.5,
+            transparent: true
+        });
+
+        const innerStructureMat = new THREE.MeshBasicMaterial({
+            color: 0x666666, // Volumen interno más claro
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15
+        });
+
+        const lampMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffddaa, 
+            toneMapped: false
+        });
+
+        // --- GENERACIÓN ---
+        const group = new THREE.Group();
+        const lightsGroup = new THREE.Group();
+
+        const numRibbons = 12; 
+        const galleryLength = 130; 
+        const ribbonWidth = galleryLength / numRibbons;
+        
+        let firstCurve = null, lastCurve = null;
+
+        for (let i = 0; i < numRibbons; i++) {
+            const zPos = (i * ribbonWidth) - (galleryLength / 2) + (ribbonWidth / 2);
+            
+            const result = createRibbon(zPos, i, ribbonWidth);
+            const geometry = result.geometry;
+            const lightPoints = result.lightPoints;
+            
+            if (i === 0) firstCurve = result.curve;
+            if (i === numRibbons - 1) lastCurve = result.curve;
+            
+            const mesh = new THREE.Mesh(geometry, metalRoofMaterial);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+
+            const wireframeGeom = new THREE.WireframeGeometry(geometry);
+            const structure = new THREE.LineSegments(wireframeGeom, trussMaterial);
+            structure.scale.set(0.995, 0.995, 0.995);
+            group.add(structure);
+
+            const innerVol = new THREE.Mesh(geometry, innerStructureMat);
+            innerVol.scale.set(0.95, 0.95, 0.95);
+            group.add(innerVol);
+
+            // CORRECCIÓN DE ERROR: Desactivar sombras en luces puntuales masivas
+            lightPoints.forEach(point => {
+                // AUMENTADO: Intensidad mucho mayor para que iluminen bien
+                const interiorLight = new THREE.PointLight(0xffaa55, 3.5, 35); 
+                interiorLight.position.set(point.x, point.y - 2.0, point.z);
+                
+                // IMPORTANTE: Desactivamos castShadow para evitar exceder MAX_TEXTURE_IMAGE_UNITS
+                interiorLight.castShadow = false; 
+                
+                lightsGroup.add(interiorLight);
+
+                const lampGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                const lampMesh = new THREE.Mesh(lampGeo, lampMaterial);
+                lampMesh.position.copy(interiorLight.position);
+                lightsGroup.add(lampMesh);
+            });
+        }
+
+        if (firstCurve) group.add(createFacade(-(galleryLength / 2), firstCurve));
+        if (lastCurve) group.add(createFacade((galleryLength / 2), lastCurve));
+
+        scene.add(group);
+        scene.add(lightsGroup);
+
+        // --- FUNCIONALIDAD DÍA/NOCHE ---
+        const toggleBtn = document.getElementById('toggle-btn');
+        const infoText = document.querySelector('#info p');
+
+        toggleBtn.addEventListener('click', () => {
+            isNight = !isNight;
+            if (isNight) {
+                // Modo Noche
+                scene.background.set(0x050510);
+                ambientLight.color.set(0x111133);
+                ambientLight.intensity = 0.4;
+                mainLight.color.set(0x88aaff);
+                mainLight.intensity = 0.6;
+                mainLight.position.set(-50, 80, -30);
+                fillLight.intensity = 0.0;
+                planeMaterial.color.set(0x1a1a2a);
+                gridHelper.material.color.set(0x333344);
+                renderer.toneMappingExposure = 1.2;
+                lightsGroup.visible = true;
+                toggleBtn.textContent = "Cambiar a Día";
+                infoText.innerHTML = "Modo: Noche.<br>Plateado visible de noche.<br>Luminarias internas potentes.<br>Click y arrastra para rotar.";
+            } else {
+                // Modo Día
+                scene.background.set(0x87ceeb);
+                ambientLight.color.set(0xffffff);
+                ambientLight.intensity = 0.6;
+                mainLight.color.set(0xffffee);
+                mainLight.intensity = 1.2;
+                mainLight.position.set(50, 80, 30);
+                fillLight.intensity = 0.4;
+                planeMaterial.color.set(0xf5f5f5);
+                gridHelper.material.color.set(0xcccccc);
+                renderer.toneMappingExposure = 1.0;
+                lightsGroup.visible = false;
+                toggleBtn.textContent = "Cambiar a Noche";
+                infoText.innerHTML = "Modo: Día.<br>Plateado visible de día.<br>Luminarias internas apagadas.<br>Click y arrastra para rotar.";
+            }
+        });
+
+        // --- ANIMACIÓN ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    </script>
+</body>
+</html>

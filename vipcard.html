@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarjeta VIP Gold ECD - Texto Nítido</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Arial', sans-serif; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffd700;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #ffd700;
+            border-radius: 4px;
+            pointer-events: none;
+            text-shadow: 0 0 5px #ffd700;
+            z-index: 10;
+        }
+        h1 { margin: 0 0 5px 0; font-size: 1.2rem; }
+        p { margin: 0; font-size: 0.8rem; }
+    </style>
+    <!-- Importamos Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="info">
+        <h1>MEMBRESÍA ECD VIP</h1>
+        <p>Texto Ultra Legible<br>Rotación Automática<br>Arrastra para mover cámara.</p>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 1. ESCENA ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050300); 
+        
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 4, 9); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.3;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = false; // Lo haremos manualmente para controlar mejor el eje
+        controls.maxPolarAngle = Math.PI / 2 + 0.2;
+
+        const clock = new THREE.Clock();
+
+        // --- 2. TEXTURAS MEJORADAS ---
+        
+        function createGoldCardTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 640; 
+            const ctx = canvas.getContext('2d');
+            
+            // 1. Fondo Dorado Degradado
+            const gradient = ctx.createLinearGradient(0, 0, 1024, 640);
+            gradient.addColorStop(0.0, '#f0d070'); 
+            gradient.addColorStop(0.3, '#e6c256'); 
+            gradient.addColorStop(0.5, '#fff4d0'); 
+            gradient.addColorStop(0.7, '#cfaa3d'); 
+            gradient.addColorStop(1.0, '#9e7e1e'); 
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0,0,1024,640);
+            
+            // 2. Punteado sutil
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            for(let i=0; i<1024; i+=8) {
+                for(let j=0; j<640; j+=8) {
+                    if ((i+j)%16 === 0) {
+                        ctx.beginPath();
+                        ctx.arc(i, j, 1.5, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // 3. Logos Superiores (Negro nítido)
+            ctx.fillStyle = '#000000';
+            ctx.textAlign = 'right';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('Escuela de', 890, 80);
+            ctx.font = 'bold 32px Arial'; // Más grande
+            ctx.fillText('CONSTRUCCIÓN', 890, 115);
+            ctx.fillText('DIGITAL', 890, 150);
+
+            // 4. TEXTOS PRINCIPALES (Mejorados para legibilidad)
+            ctx.textAlign = 'left';
+
+            // --- "MEMBRESÍA" ---
+            ctx.font = '60px Arial'; 
+            // Sombra negra sólida para separar del fondo
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillText('MEMBRESÍA', 62, 442);
+            
+            // Texto blanco puro
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('MEMBRESÍA', 60, 440);
+            
+            // Borde fino negro para definición
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.strokeText('MEMBRESÍA', 60, 440);
+            
+            // --- "ECD VIP" ---
+            ctx.font = 'bold 160px Arial';
+            
+            // Sombra suave difuminada (Glow dorado oscuro)
+            ctx.shadowColor = '#b8860b';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('ECD VIP', 50, 580);
+            
+            // Reset sombra para trazos nítidos
+            ctx.shadowBlur = 0;
+            
+            // Relleno Blanco Brillante
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('ECD VIP', 50, 580);
+            
+            // Contorno Negro (Stroke) para máximo contraste
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)'; // Sutil borde oscuro
+            ctx.lineWidth = 3;
+            ctx.strokeText('ECD VIP', 50, 580);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter; // Filtro lineal para suavizar pixelado
+            return tex;
+        }
+
+        function createBeamTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 512, 0, 0);
+            gradient.addColorStop(0, 'rgba(255, 170, 0, 0.0)'); 
+            gradient.addColorStop(0.3, 'rgba(255, 200, 0, 0.1)');
+            gradient.addColorStop(1, 'rgba(255, 255, 100, 0.4)'); 
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0,0,128,512);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const cardTexture = createGoldCardTexture();
+        const beamTexture = createBeamTexture();
+
+        // --- 3. OBJETOS ---
+        
+        const mainGroup = new THREE.Group();
+        scene.add(mainGroup);
+
+        // --- A. PEDESTAL ---
+        const pedestalGroup = new THREE.Group();
+        pedestalGroup.position.y = -2;
+        mainGroup.add(pedestalGroup);
+
+        const baseMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.2, 2.5, 0.6, 64),
+            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.5 })
+        );
+        pedestalGroup.add(baseMesh);
+
+        const neonMesh = new THREE.Mesh(
+            new THREE.TorusGeometry(2.2, 0.05, 16, 100),
+            new THREE.MeshBasicMaterial({ color: 0xff6600 })
+        );
+        neonMesh.rotation.x = Math.PI / 2;
+        neonMesh.position.y = 0.32;
+        pedestalGroup.add(neonMesh);
+
+        const neonLight = new THREE.PointLight(0xff6600, 3, 8);
+        neonLight.position.set(0, 0.5, 0);
+        pedestalGroup.add(neonLight);
+
+        // --- B. TARJETA HOLOGRÁFICA ---
+        const cardWrapper = new THREE.Group(); // Grupo intermedio para inclinación
+        cardWrapper.position.y = 1.5;
+        
+        // ** INCLINACIÓN DIAGONAL FIJA **
+        // Rotamos en X para inclinar hacia atrás y en Z para la diagonal
+        cardWrapper.rotation.x = Math.PI * 0.1;  // Inclinación vertical
+        cardWrapper.rotation.z = Math.PI * 0.15; // Inclinación diagonal
+        cardWrapper.rotation.y = -Math.PI * 0.1; // Ligera rotación Y para mejor ángulo
+        
+        mainGroup.add(cardWrapper);
+
+        const cardGroup = new THREE.Group(); // Grupo interno para flotación local
+        cardWrapper.add(cardGroup);
+
+        const cardGeo = new THREE.PlaneGeometry(3.8, 2.4);
+
+        // 1. Tarjeta Sólida (Centro)
+        const mainCardMat = new THREE.MeshStandardMaterial({
+            map: cardTexture,
+            roughness: 0.3,
+            metalness: 0.6, // Un poco menos metálico para que el blanco se vea blanco
+            side: THREE.DoubleSide,
+            emissive: 0x332200, 
+            emissiveIntensity: 0.2
+        });
+        const mainCard = new THREE.Mesh(cardGeo, mainCardMat);
+        cardGroup.add(mainCard);
+
+        // 2. Capas Transparentes
+        const layerMat = new THREE.MeshBasicMaterial({
+            map: cardTexture,
+            transparent: true,
+            opacity: 0.15,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            color: 0xffcc00 
+        });
+
+        for(let i=1; i<=4; i++) {
+            const layer = new THREE.Mesh(cardGeo, layerMat);
+            layer.position.z = -i * 0.12; 
+            layer.scale.multiplyScalar(1.0 + i * 0.04); 
+            cardGroup.add(layer);
+        }
+
+        // 3. Barra de Escaneo
+        const scanBar = new THREE.Mesh(
+            new THREE.PlaneGeometry(4.2, 0.08),
+            new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            })
+        );
+        cardGroup.add(scanBar);
+
+        // --- C. PROYECTOR ---
+        const beamMesh = new THREE.Mesh(
+            new THREE.ConeGeometry(2.5, 4.0, 32, 1, true),
+            new THREE.MeshBasicMaterial({
+                map: beamTexture,
+                transparent: true,
+                opacity: 0.25,
+                color: 0xffaa00,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            })
+        );
+        beamMesh.position.y = -0.5; 
+        beamMesh.rotation.x = Math.PI;
+        // El haz rota con el wrapper para seguir la tarjeta
+        cardWrapper.add(beamMesh);
+
+        // --- 4. ILUMINACIÓN ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Más luz ambiente
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffaa00, 2.5); // Luz direccional fuerte
+        dirLight.position.set(5, 5, 15);
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1, 20); // Luz blanca frontal para texto
+        pointLight.position.set(0, 2, 6);
+        scene.add(pointLight);
+
+        // Partículas
+        const particlesGeo = new THREE.BufferGeometry();
+        const pCount = 250;
+        const pPos = new Float32Array(pCount * 3);
+        for(let i=0; i<pCount*3; i++) pPos[i] = (Math.random()-0.5)*8;
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        
+        const particlesMat = new THREE.PointsMaterial({
+            color: 0xffcc00,
+            size: 0.04,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+        mainGroup.add(particleSystem);
+
+        // --- 5. ANIMACIÓN ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // 1. ROTACIÓN GLOBAL AUTOMÁTICA
+            // Rotamos todo el grupo principal en el eje Y
+            mainGroup.rotation.y = time * 0.3;
+
+            // 2. Flotación local de la tarjeta (dentro de su inclinación)
+            cardGroup.position.z = Math.sin(time * 1.5) * 0.05; // Pequeño movimiento en profundidad local
+
+            // 3. Escáner
+            const scanY = (time * 1.5) % 3.0 - 1.5; 
+            scanBar.position.y = scanY;
+            scanBar.visible = Math.abs(scanY) < 1.3;
+
+            // 4. Haz
+            beamMesh.material.opacity = 0.2 + Math.sin(time * 8) * 0.05;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

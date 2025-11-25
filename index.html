@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Feria 3D - Black Friday (Optimizado)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Teko:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
+    
+    <style>
+        /* --- ESTILOS GENERALES --- */
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Rajdhani', sans-serif; touch-action: none; }
+
+        /* --- LANDING --- */
+        #blocker {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)), url('img/portada.jpg');
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            z-index: 99; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.5s; overflow: hidden;
+        }
+        .bg-tape-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; z-index: 0; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transform: rotate(-10deg) scale(1.2); 
+        }
+        .tape-line {
+            width: 200%; font-family: 'Teko', sans-serif; font-size: 8vh; font-weight: 700;
+            color: rgba(255, 255, 255, 0.04); white-space: nowrap; margin: 1vh 0;
+            text-transform: uppercase; letter-spacing: 5px; user-select: none;
+        }
+        .move-left { animation: scrollTextLeft 60s linear infinite; }
+        .move-right { animation: scrollTextRight 60s linear infinite; }
+        @keyframes scrollTextLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-25%); } }
+        @keyframes scrollTextRight { 0% { transform: translateX(-25%); } 100% { transform: translateX(0); } }
+        #top-logos-container {
+            position: absolute; top: 40px; width: 100%; max-width: 1400px; 
+            display: flex; justify-content: space-between; padding: 0 40px; 
+            box-sizing: border-box; z-index: 101;
+        }
+        .corner-logo { width: 18vw; max-width: 280px; min-width: 140px; height: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transition: transform 0.3s ease; }
+        #main-logo { width: 50vw; max-width: 1200px; height: auto; margin-bottom: 10px; filter: drop-shadow(0 0 30px rgba(255, 68, 0, 0.6)); animation: float 3s ease-in-out infinite; position: relative; z-index: 102; }
+        #main-subtitle { font-family: 'Teko', sans-serif; font-size: 2rem; color: #fff; text-align: center; margin-bottom: 30px; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 255, 255, 0.4); letter-spacing: 4px; position: relative; z-index: 102; font-weight: 500; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        .instructions { border: 1px solid rgba(255, 255, 255, 0.2); padding: 20px 40px; background: rgba(0, 0, 0, 0.85); margin-top: 10px; border-radius: 50px; text-align: center; color: #ccc; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); font-size: 1rem; letter-spacing: 1px; position: relative; z-index: 102; }
+        .key { border: 1px solid #ff4400; padding: 2px 8px; border-radius: 4px; font-weight: bold; color: #ff4400; }
+        #start-btn { margin-top: 50px; padding: 20px 70px; font-size: 3rem; font-family: 'Teko', sans-serif; background: #ff4400; border: none; color: #000; cursor: pointer; font-weight: 700; transition: all 0.3s; text-transform: uppercase; letter-spacing: 4px; box-shadow: 0 0 40px rgba(255, 68, 0, 0.4); border-radius: 5px; position: relative; z-index: 102; }
+        #start-btn:hover { background: #fff; color: #ff4400; box-shadow: 0 0 60px rgba(255, 68, 0, 0.8); transform: scale(1.1) rotate(-1deg); }
+
+        /* --- UI 3D --- */
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: rgba(0, 0, 0, 0.6); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; transition: all 0.2s; border: 1px solid #fff; display: none; }
+        #interaction-msg { position: absolute; bottom: 15%; width: 100%; text-align: center; color: #00d2ff; font-size: 1.5rem; font-weight: bold; display: none; text-shadow: 0 0 10px rgba(255,255,255,0.8); font-family: 'Teko'; letter-spacing: 2px; z-index: 20; }
+        #mobile-controls { display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+        #zone-joystick-l { position: absolute; bottom: 20px; left: 20px; width: 150px; height: 150px; pointer-events: auto; }
+        #zone-joystick-r { position: absolute; bottom: 20px; right: 20px; width: 150px; height: 150px; pointer-events: auto; }
+        #mobile-interact-btn { position: absolute; bottom: 180px; right: 40px; width: 80px; height: 80px; background: rgba(0, 210, 255, 0.5); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; display: flex; justify-content: center; align-items: center; font-family: 'Teko'; color: white; font-size: 1.2rem; font-weight: bold; text-align: center; box-shadow: 0 0 20px rgba(0, 210, 255, 0.3); opacity: 0.5; transition: opacity 0.3s; }
+        #mobile-interact-btn.active { opacity: 1; background: rgba(0, 210, 255, 0.9); }
+
+        /* --- MODAL --- */
+        #stand-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
+        .modal-card { width: 85%; max-width: 1200px; height: 70vh; background: #fff; border: none; display: flex; box-shadow: 0 0 80px rgba(0, 210, 255, 0.3); position: relative; overflow: hidden; }
+        .marquee { position: absolute; background: #00d2ff; color: #fff; font-family: 'Teko', sans-serif; font-weight: bold; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; overflow: hidden; z-index: 10; user-select: none; }
+        .marquee span { white-space: nowrap; padding: 0 20px; }
+        .marquee.top { top: 0; left: 0; width: 100%; height: 30px; } .marquee.top span { animation: scrollLeft 10s linear infinite; }
+        .marquee.bottom { bottom: 0; left: 0; width: 100%; height: 30px; } .marquee.bottom span { animation: scrollRight 10s linear infinite; }
+        .marquee.left { top: 0; left: 0; width: 30px; height: 100%; flex-direction: column; justify-content: center;} .marquee.left span { writing-mode: vertical-rl; transform: rotate(180deg); animation: scrollDown 10s linear infinite; padding: 20px 0; }
+        .marquee.right { top: 0; right: 0; width: 30px; height: 100%; flex-direction: column; justify-content: center;} .marquee.right span { writing-mode: vertical-rl; transform: rotate(180deg); animation: scrollUp 10s linear infinite; padding: 20px 0; }
+        @keyframes scrollLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } } @keyframes scrollRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes scrollDown { from { transform: translateY(-100%); } to { transform: translateY(0); } } @keyframes scrollUp { from { transform: translateY(0); } to { transform: translateY(-100%); } }
+        .vid-container { flex: 2; background: #f0f0f0; position: relative; display:flex; align-items:center; justify-content:center; margin: 30px 0 30px 30px; }
+        .vid-container iframe { width: 100%; height: 100%; border: none; }
+        .info-container { flex: 1; padding: 40px; color: #333; position: relative; display: flex; flex-direction: column; justify-content: center; border-left: 1px solid #eee; background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%); margin: 30px 30px 30px 0; }
+        .info-container h2 { color: #00d2ff; font-family: 'Teko'; font-size: 4rem; margin: 0 0 30px 0; line-height: 0.9; text-transform: uppercase;} 
+        .close-btn { position: absolute; top: 0px; right: 10px; font-size: 3rem; color: #999; background: none; border: none; cursor: pointer; transition: 0.3s; z-index: 20; } .close-btn:hover { color: #00d2ff; }
+        .btn-link { display: block; padding: 20px; text-align: center; font-weight: bold; text-decoration: none; margin-top: 20px; font-family: 'Teko'; font-size: 1.8rem; transition: 0.3s; letter-spacing: 1px; border-radius: 4px; text-transform: uppercase; }
+        .btn-buy { background: #00d2ff; color: #fff; border: none; } .btn-buy:hover { background: #00aadd; box-shadow: 0 0 30px rgba(0, 210, 255, 0.6); }
+        .btn-doc { border: 1px solid #ccc; color: #666; background: transparent; } .btn-doc:hover { border-color: #00d2ff; color: #00d2ff; }
+
+        @media (max-width: 768px) {
+            .modal-card { flex-direction: column; height: 85vh; } .vid-container { flex: 1; margin: 30px 30px 0 30px; } .info-container { flex: 1; margin: 0 30px 30px 30px; padding: 20px; } .info-container h2 { font-size: 2.5rem; } .btn-link { font-size: 1.2rem; padding: 15px; } #interaction-msg { font-size: 1.2rem; bottom: 25%; } #main-logo { width: 90vw; } #main-subtitle { font-size: 1.2rem; } .instructions { display: none; } #start-btn { font-size: 1.5rem; padding: 15px 40px; } .corner-logo { width: 25vw; } #crosshair { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="blocker">
+        <div class="bg-tape-container">
+            <div class="tape-line move-left">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-right">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-left">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-right">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-left">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+        </div>
+        <div id="top-logos-container">
+            <img id="logo-left" class="corner-logo" src="img/Logo01.png" alt="Logo Izquierda">
+            <img id="logo-right" class="corner-logo" src="img/Logo02.png" alt="Logo Derecha">
+        </div>
+        <img id="main-logo" src="img/texto_black.png" alt="LLEGÓ EL BLACK FRIDAY">
+        <h3 id="main-subtitle">PROGRAMAS, CURSOS Y MEMBRESÍA</h3>
+        <div class="instructions">
+            <p><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> MOVERSE &nbsp;|&nbsp; MOUSE - MIRAR &nbsp;|&nbsp; CLIC - ABRIR</p>
+        </div>
+        <button id="start-btn">¿ESTÁS LISTO?</button>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="interaction-msg">CLIC PARA ABRIR</div>
+
+    <div id="mobile-controls">
+        <div id="zone-joystick-l"></div>
+        <div id="zone-joystick-r"></div>
+        <div id="mobile-interact-btn">VER</div>
+    </div>
+
+    <div id="stand-modal">
+        <div class="modal-card">
+            <div class="marquee top"><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span></div>
+            <div class="marquee bottom"><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span></div>
+            <div class="marquee left"><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span></div>
+            <div class="marquee right"><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span><span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp;</span></div>
+            
+            <div class="vid-container" id="video-wrapper"></div>
+            <div class="info-container">
+                <button class="close-btn" onclick="closeModal()">×</button>
+                <h2 id="m-title">TITULO</h2>
+                <a id="m-buy" href="#" class="btn-link btn-buy" target="_blank">ACCEDER A LA OFERTA</a>
+                <a id="m-doc" href="#" class="btn-link btn-doc" target="_blank">DESCARGAR BROCHURE</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const IFRAME_TEMPLATE = (url) => `<iframe width="100%" height="100%" src="${url}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+        const V1 = "https://www.youtube-nocookie.com/embed/mZ_uPr7rHT4?si=s-docLxR3NVd3Q5T";
+        
+        const DATA = [
+            // IZQUIERDA
+            { t: "OFERTA BIM", pos: "left-back", type: 1, img: 'img/stand1.jpg', vid: V1, offer: "#", pdf: "#" },
+            { t: "SEGURIDAD BF", pos: "left-back", type: 2, img: 'img/stand2.jpg', vid: V1, offer: "#", pdf: "#" },
+            { t: "PACK RESIDENCIA", pos: "left-back", type: 3, img: 'img/stand3.jpg', vid: V1, offer: "#", pdf: "#" },
+            { t: "KIT TOPOGRAFÍA", pos: "left-front", type: 4, img: 'img/stand4.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "MAQUINARIA PRO", pos: "left-front", type: 5, img: 'img/stand5.jpg', vid: V1, offer: "#", pdf: "#" },
+            // DERECHA
+            { t: "PRECIOS BLACK", pos: "right-back", type: 2, img: 'img/stand6.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "LEAN EXPRESS", pos: "right-back", type: 1, img: 'img/stand7.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "ESTRUCTURAS", pos: "right-back", type: 5, img: 'img/stand8.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "INSTALACIONES", pos: "right-front", type: 3, img: 'img/stand9.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "INTERVENTORÍA", pos: "right-front", type: 4, img: 'img/stand10.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            // CENTRO
+            { t: "MEGA OFERTA", pos: "center", type: 'main', img: 'img/stand_principal.jpg', vid: V1, offer: "#", pdf: "#" },
+            // SALIDAS
+            { t: "SALIDA", pos: "exit-center", type: 'exit-main', img: 'img/salida_centro.jpg', link: "https://google.com" }, 
+            { t: "WEB", pos: "exit-left", type: 'exit-side', img: 'img/salida_izq.jpg', link: "#" }, 
+            { t: "CONTACTO", pos: "exit-right", type: 'exit-side', img: 'img/salida_der.jpg', link: "#" } 
+        ];
+
+        THREE.PointerLockControls=function(t,e){if(void 0===e&&(e=document.body),this.domElement=e,this.isLocked=!1,this.minPolarAngle=0,this.maxPolarAngle=Math.PI,this.pointerSpeed=1.0,!(t instanceof THREE.Camera))throw new Error("THREE.PointerLockControls: First parameter must be a camera.");var n=this,o={type:"change"},r={type:"lock"},i={type:"unlock"},c=new THREE.Euler(0,0,0,"YXZ"),s=Math.PI/2,a=new THREE.Vector3;function l(e){if(!1!==n.isLocked){var r=e.movementX||e.mozMovementX||e.webkitMovementX||0,i=e.movementY||e.mozMovementY||e.webkitMovementY||0;c.setFromQuaternion(t.quaternion),c.y-=r*.002*n.pointerSpeed,c.x-=i*.002*n.pointerSpeed,c.x=Math.max(s-n.maxPolarAngle,Math.min(s-n.minPolarAngle,c.x)),t.quaternion.setFromEuler(c),n.dispatchEvent(o)}}function u(){n.domElement.ownerDocument.pointerLockElement===n.domElement?(n.dispatchEvent(r),n.isLocked=!0):(n.dispatchEvent(i),n.isLocked=!1)}this.connect=function(){n.domElement.ownerDocument.addEventListener("mousemove",l,!1),n.domElement.ownerDocument.addEventListener("pointerlockchange",u,!1)},this.disconnect=function(){n.domElement.ownerDocument.removeEventListener("mousemove",l,!1),n.domElement.ownerDocument.removeEventListener("pointerlockchange",u,!1)},this.dispose=function(){this.disconnect()},this.getObject=function(){return t},this.getDirection=function(){var e=new THREE.Vector3(0,0,-1);return function(n){return n.copy(e).applyQuaternion(t.quaternion)}}(),this.moveForward=function(e){a.setFromMatrixColumn(t.matrix,0),a.crossVectors(t.up,a),t.position.addScaledVector(a,e)},this.moveRight=function(e){a.setFromMatrixColumn(t.matrix,0),t.position.addScaledVector(a,e)},this.lock=function(){this.domElement.requestPointerLock()},this.unlock=function(){n.domElement.ownerDocument.exitPointerLock()},this.connect()};THREE.PointerLockControls.prototype=Object.create(THREE.EventDispatcher.prototype),THREE.PointerLockControls.prototype.constructor=THREE.PointerLockControls;
+
+        let camera, scene, renderer, controls, raycaster;
+        let moveF=false, moveB=false, moveL=false, moveR=false;
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        const interactables = []; 
+        const screensToAnimate = []; 
+        const vipDisplaysToAnimate = []; 
+        let hovered = null; 
+        const textureLoader = new THREE.TextureLoader();
+        let lb=0, lf=0, rb=0, rf=0; 
+        let isMobile = false;
+        let joyL, joyR;
+        let moveVector = { x: 0, y: 0 };
+        let rotVector = { x: 0, y: 0 };
+
+        // OPTIMIZACIÓN: MATERIALES SIMPLES PARA MÓVILES Y RENDIMIENTO
+        const matBlackMetal = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.4, metalness: 0.5 });
+        const matDarkStone = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+        const matNeonOrange = new THREE.MeshBasicMaterial({ color: 0x00d2ff }); 
+        const matNeonWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });  
+        const matNeonCyan = new THREE.MeshBasicMaterial({ color: 0x00d2ff });
+        const matWhiteFrame = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.4 }); 
+        const matPilar = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.5 });
+        
+        // Material del techo optimizado (menos costoso que Physical)
+        const metalRoofMaterial = new THREE.MeshStandardMaterial({
+            color: 0xe0e0e0, roughness: 0.3, metalness: 0.6, side: THREE.DoubleSide, 
+            transparent: true, opacity: 0.9
+        });
+        
+        // Vidrio simplificado para rendimiento
+        const glassMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide
+        });
+
+        const trussMaterial = new THREE.LineBasicMaterial({ color: 0xaaaaaa, linewidth: 1, opacity: 0.3, transparent: true });
+        const lampMaterial = new THREE.MeshBasicMaterial({ color: 0xffddaa });
+
+        // Texturas
+        function createGoldCardTexture() {
+            const c=document.createElement('canvas'); c.width=512; c.height=320; const ctx=c.getContext('2d'); // Resolución reducida
+            const g=ctx.createLinearGradient(0,0,512,320); g.addColorStop(0,'#f0d070'); g.addColorStop(1,'#9e7e1e');
+            ctx.fillStyle=g; ctx.fillRect(0,0,512,320);
+            ctx.fillStyle='#000'; ctx.font='bold 12px Arial'; ctx.fillText('ECD VIP',20,280); // Texto simple
+            const t=new THREE.CanvasTexture(c); return t;
+        }
+        function createBeamTexture() {
+            const c=document.createElement('canvas'); c.width=64; c.height=256; const ctx=c.getContext('2d'); // Resolución reducida
+            const g=ctx.createLinearGradient(0,256,0,0); g.addColorStop(0,'rgba(255,170,0,0)'); g.addColorStop(1,'rgba(255,255,100,0.3)');
+            ctx.fillStyle=g; ctx.fillRect(0,0,64,256); return new THREE.CanvasTexture(c);
+        }
+        const cardTexture = createGoldCardTexture();
+        const beamTexture = createBeamTexture();
+
+        init();
+        animate();
+
+        function init() {
+            isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            scene = new THREE.Scene();
+            const bgColor = 0x87CEEB; 
+            scene.background = new THREE.Color(bgColor); 
+            scene.fog = new THREE.FogExp2(bgColor, 0.005); // Niebla más densa para ocultar pop-in
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 500); // Far reducido
+            camera.position.set(0, 1.7, 30); 
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambient);
+            
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            sunLight.position.set(50, 100, 50);
+            // Sombras optimizadas: Mapa más pequeño
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024; // Reducido de 4096
+            sunLight.shadow.mapSize.height = 1024;
+            scene.add(sunLight);
+
+            renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: "high-performance" }); // Antialias off en móvil
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Limitar pixel ratio
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+            
+            const blocker = document.getElementById('blocker');
+            const startBtn = document.getElementById('start-btn');
+
+            if (isMobile) {
+                document.getElementById('crosshair').style.display = 'none';
+                document.querySelector('.instructions').style.display = 'none';
+                initJoysticks();
+            }
+
+            startBtn.addEventListener('click', () => {
+                if (isMobile) {
+                    blocker.style.opacity = 0;
+                    setTimeout(() => { blocker.style.display = 'none'; document.getElementById('mobile-controls').style.display = 'block'; }, 500);
+                } else {
+                    controls.lock();
+                }
+            });
+
+            controls.addEventListener('lock', () => {
+                blocker.style.opacity = 0;
+                setTimeout(() => { blocker.style.display = 'none'; }, 500);
+            });
+
+            controls.addEventListener('unlock', () => {
+                if(document.getElementById('stand-modal').style.display !== 'flex') {
+                    blocker.style.display = 'flex';
+                    void blocker.offsetWidth; blocker.style.opacity = 1;
+                    startBtn.innerText = "REANUDAR"; 
+                }
+            });
+
+            document.addEventListener('keydown', (e) => onKey(e, true));
+            document.addEventListener('keyup', (e) => onKey(e, false));
+            if (!isMobile) document.addEventListener('click', onClick);
+            document.getElementById('mobile-interact-btn').addEventListener('touchstart', (e) => { e.preventDefault(); checkInteraction(true); });
+            window.addEventListener('resize', onResize);
+            raycaster = new THREE.Raycaster(); 
+            buildEnvironment(); 
+            buildLayout(); 
+        }
+
+        function initJoysticks() {
+            joyL = nipplejs.create({ zone: document.getElementById('zone-joystick-l'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white' });
+            joyL.on('move', (evt, data) => { if(data.vector) { moveVector.y = data.vector.y; moveVector.x = data.vector.x; } }).on('end', () => { moveVector = { x: 0, y: 0 }; });
+            joyR = nipplejs.create({ zone: document.getElementById('zone-joystick-r'), mode: 'static', position: { left: '50%', top: '50%' }, color: 'white' });
+            joyR.on('move', (evt, data) => { if(data.vector) { rotVector.x = data.vector.x; rotVector.y = data.vector.y; } }).on('end', () => { rotVector = { x: 0, y: 0 }; });
+        }
+
+        function onKey(e, v) {
+            switch(e.code) {
+                case 'KeyW': case 'ArrowUp': moveF = v; break;
+                case 'KeyS': case 'ArrowDown': moveB = v; break;
+                case 'KeyA': case 'ArrowLeft': moveL = v; break;
+                case 'KeyD': case 'ArrowRight': moveR = v; break;
+            }
+        }
+
+        // --- ENTORNO OPTIMIZADO ---
+        function createRibbon(zPos, index, width) {
+            // Geometría simplificada: Menos pasos, forma básica
+            const hGround = 0; const hShoulder = 8 + Math.random() * 1.5; const hPeak = 20 + Math.sin(index)*2;
+            const isLeft = index % 2 === 0;
+            
+            // Puntos reducidos para la curva
+            const points = [
+                new THREE.Vector3(-35, hGround, zPos),
+                new THREE.Vector3(-28, hShoulder, zPos),
+                new THREE.Vector3(0, hPeak, zPos),
+                new THREE.Vector3(28, hShoulder, zPos),
+                new THREE.Vector3(35, hGround, zPos)
+            ];
+
+            const arcPath = new THREE.CatmullRomCurve3(points);
+            // Forma del perfil simplificada
+            const shape = new THREE.Shape(); 
+            shape.moveTo(-width/2+0.2, -0.2); 
+            shape.lineTo(width/2-0.2, -0.2); 
+            shape.lineTo(width/2-0.2, 0.2); 
+            shape.lineTo(-width/2+0.2, 0.2);
+
+            // Menos pasos de extrusión (20 en lugar de 70)
+            const geometry = new THREE.ExtrudeGeometry(shape, { steps: 20, bevelEnabled: false, extrudePath: arcPath });
+            
+            // Puntos de luz precalculados
+            const lightPoint1 = arcPath.getPoint(0.35); 
+            const lightPoint2 = arcPath.getPoint(0.65);
+
+            return { geometry, curve: arcPath, lightPoints: [lightPoint1, lightPoint2] };
+        }
+
+        function buildEnvironment() {
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(350, 350), new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.9 }));
+            plane.rotation.x = -Math.PI / 2; plane.receiveShadow = true; scene.add(plane);
+            // GridHelper removido para performance
+
+            const group = new THREE.Group();
+            // Reducimos número de cintas (10 en lugar de 14)
+            const numRibbons = 10; const galleryLength = 140; const ribbonWidth = galleryLength / numRibbons;
+
+            for (let i = 0; i < numRibbons; i++) {
+                const zPos = (i * ribbonWidth) - (galleryLength / 2) + (ribbonWidth / 2);
+                const result = createRibbon(zPos, i, ribbonWidth);
+                
+                const mesh = new THREE.Mesh(result.geometry, metalRoofMaterial);
+                mesh.castShadow = true; mesh.receiveShadow = true; 
+                group.add(mesh);
+
+                // Wireframe eliminado para ahorrar draw calls
+
+                // Luces FALSAS (Esferas brillantes sin PointLight real)
+                result.lightPoints.forEach(pt => {
+                    const lm = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffaa55 }));
+                    lm.position.set(pt.x, pt.y - 1.0, pt.z);
+                    group.add(lm);
+                });
+            }
+            
+            // Solo 2 luces puntuales reales para ambiente general
+            const l1 = new THREE.PointLight(0xffaa55, 1.0, 60); l1.position.set(0, 15, -30); l1.castShadow = false; scene.add(l1);
+            const l2 = new THREE.PointLight(0xffaa55, 1.0, 60); l2.position.set(0, 15, 30); l2.castShadow = false; scene.add(l2);
+
+            // Fachadas simplificadas (Planos simples en lugar de extrusión compleja)
+            const glassGeo = new THREE.PlaneGeometry(galleryLength, 20);
+            const glassL = new THREE.Mesh(glassGeo, glassMaterial);
+            glassL.position.set(-30, 10, 0); glassL.rotation.y = Math.PI/2; group.add(glassL);
+            const glassR = new THREE.Mesh(glassGeo, glassMaterial);
+            glassR.position.set(30, 10, 0); glassR.rotation.y = -Math.PI/2; group.add(glassR);
+
+            scene.add(group);
+        }
+
+        function createScreen(w, h, data) {
+            const finalW = 3.5; const finalH = 5.0;
+            let tex = data.img ? textureLoader.load(data.img) : null;
+            const mat = tex ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshBasicMaterial({ color: 0x444 });
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(finalW, finalH), mat);
+            mesh.userData = { data: data }; interactables.push(mesh); screensToAnimate.push(mesh);
+            return mesh;
+        }
+        function createSalidaSignTexture() {
+            const cvs = document.createElement('canvas'); cvs.width=256; cvs.height=64; const ctx = cvs.getContext('2d'); // Resolución baja
+            ctx.fillStyle = '#111'; ctx.fillRect(0,0,256,64); ctx.fillStyle = '#00d2ff'; ctx.font = 'bold 40px sans-serif'; 
+            ctx.textAlign = 'center'; ctx.textBaseline='middle'; ctx.fillText("SALIDA", 128, 32); return new THREE.CanvasTexture(cvs);
+        }
+        function addLocalLight(g, c, i, d, x, y, z) {
+            // En optimizado, NO añadimos luz real por stand, solo un sprite o mesh brillante si se desea
+            // O usamos una luz muy tenue sin sombras
+            // Para mantener rendimiento, comentamos la creación de luces individuales por stand
+            // const l = new THREE.PointLight(c, i*0.5, d); l.position.set(x, y, z); l.castShadow = false; g.add(l);
+        }
+
+        // STANDS (Simplificados)
+        function buildStandType1(g, d) { 
+            const b=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.5,0.2,16), matBlackMetal); b.position.y=0.1; g.add(b); // Menos segmentos
+            const a=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.4,6,8,3.7), matDarkStone); a.rotation.z=0.6; a.position.y=3.5; g.add(a);
+            const s=createScreen(null,null,d); s.position.set(0,3.8,0); g.add(s);
+        }
+        function buildStandType2(g, d) { 
+             const b=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.5,0.3,16), matBlackMetal); b.position.y=0.15; g.add(b);
+             const r1=new THREE.Mesh(new THREE.TorusGeometry(4.5,0.2,4,4), matWhiteFrame); r1.position.set(0,4.5,-0.5); g.add(r1);
+             const s=createScreen(null,null,d); s.position.set(0,4.2,0.5); g.add(s);
+        }
+        function buildStandType3(g, d) { 
+            const b=new THREE.Mesh(new THREE.CylinderGeometry(4,4.2,0.3,16), matDarkStone); b.position.y=0.15; g.add(b);
+            const s=createScreen(null,null,d); s.position.set(0,3.5,0); g.add(s);
+        }
+        function buildStandType4(g, d) { 
+            const b=new THREE.Mesh(new THREE.CylinderGeometry(4,4,0.2,16), matBlackMetal); b.position.y=0.1; g.add(b);
+            const p=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,0.3,16), matBlackMetal); p.position.y=7.5; g.add(p);
+            const s=createScreen(null,null,d); s.position.set(0,4,0); s.material.transparent=false; g.add(s);
+        }
+        function buildStandType5(g, d) { 
+            const b=new THREE.Mesh(new THREE.CylinderGeometry(3,3.5,0.5,16), matBlackMetal); b.position.y=0.25; g.add(b);
+            const s=createScreen(null,null,d); s.position.set(0,4,0); g.add(s);
+        }
+        
+        function buildVIPDisplay(g, p) {
+            const v=new THREE.Group(); v.position.copy(p); g.add(v);
+            const b=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.5,0.6,16), matBlackMetal); b.position.y=0.3; v.add(b);
+            const card=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.6), new THREE.MeshBasicMaterial({map:cardTexture, side:2})); 
+            card.position.y=2.5; v.add(card);
+            v.userData.update = function(t) { v.rotation.y=t*0.5; };
+            vipDisplaysToAnimate.push(v);
+        }
+
+        function buildMainStand(g, d) {
+            const b=new THREE.Mesh(new THREE.CylinderGeometry(5,5,0.2,32), matBlackMetal); b.position.y=0.1; g.add(b);
+            let tex = d.img ? textureLoader.load(d.img) : null;
+            const s=new THREE.Mesh(new THREE.PlaneGeometry(12,8), tex?new THREE.MeshBasicMaterial({map:tex}):new THREE.MeshBasicMaterial({color:0x555}));
+            s.position.set(0,6,0); s.userData={data:d}; interactables.push(s); screensToAnimate.push(s); g.add(s);
+            buildVIPDisplay(g, new THREE.Vector3(-8,0,3)); buildVIPDisplay(g, new THREE.Vector3(8,0,3));
+        }
+
+        function buildExit(g, d, isMain) {
+            const w = isMain ? 12 : 9; const h = isMain ? 7 : 6;
+            const b=new THREE.Mesh(new THREE.BoxGeometry(w,0.4,3), new THREE.MeshStandardMaterial({color:0x222,roughness:0.5})); b.position.set(0,0.2,0); g.add(b);
+            const f=new THREE.Mesh(new THREE.BoxGeometry(w-1,0.8,0.8), matBlackMetal); f.position.set(0,h+0.4,0); g.add(f);
+            const sTex=createSalidaSignTexture();
+            const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.8,1), new THREE.MeshBasicMaterial({map:sTex,transparent:true})); sign.position.set(0,h+1.4,0.11); g.add(sign);
+            const pTex=textureLoader.load(d.img);
+            const p=new THREE.Mesh(new THREE.PlaneGeometry(w-3,h-1), new THREE.MeshBasicMaterial({map:pTex}));
+            p.position.set(0,h/2+0.9,-0.5); p.userData={data:d}; interactables.push(p); g.add(p);
+        }
+
+        function buildLayout() {
+            DATA.forEach(d => {
+                const g = new THREE.Group(); let x=0,z=0,rot=0;
+                if(d.pos === 'left-back') { z=12-(lb++*14); x=-15; rot=Math.PI/4; } 
+                else if (d.pos === 'left-front') { z=6-(lf++*14); x=-8; rot=Math.PI/6; } 
+                else if(d.pos === 'right-back') { z=12-(rb++*14); x=15; rot=-Math.PI/4; } 
+                else if(d.pos === 'right-front') { z=6-(rf++*14); x=8; rot=-Math.PI/6; } 
+                else if(d.pos === 'center') { x=0; z=-40; rot=0; } 
+                else if(d.pos.includes('exit')) { z=45; rot=Math.PI; if(d.pos.includes('left')) x=-12; if(d.pos.includes('right')) x=12; }
+                g.position.set(x,0,z); g.rotation.y=rot;
+                if(d.type===1) buildStandType1(g,d); else if(d.type===2) buildStandType2(g,d); else if(d.type===3) buildStandType3(g,d);
+                else if(d.type===4) buildStandType4(g,d); else if(d.type===5) buildStandType5(g,d); else if(d.type==='main') buildMainStand(g,d);
+                else if(d.type.includes('exit')) buildExit(g,d, d.type.includes('main'));
+                scene.add(g);
+            });
+        }
+
+        function checkInteraction(force = false) {
+            if ((controls.isLocked || force) && hovered) {
+                const d = hovered.userData.data;
+                if (d.pos.includes('exit')) window.open(d.link, '_blank');
+                else { openModal(d); if(!isMobile) controls.unlock(); }
+            }
+        }
+
+        function onClick() { checkInteraction(); }
+        function openModal(d) {
+            document.getElementById('m-title').innerText = d.t;
+            document.getElementById('m-buy').href = d.offer || "#";
+            document.getElementById('m-doc').href = d.pdf || "#";
+            document.getElementById('video-wrapper').innerHTML = d.vid ? IFRAME_TEMPLATE(d.vid) : '';
+            document.getElementById('stand-modal').style.display = 'flex';
+            if(isMobile) document.getElementById('mobile-controls').style.display = 'none';
+        }
+
+        window.closeModal = function() {
+            document.getElementById('stand-modal').style.display = 'none';
+            document.getElementById('video-wrapper').innerHTML = '';
+            if(!isMobile) controls.lock();
+            else document.getElementById('mobile-controls').style.display = 'block';
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            const timeSec = time/1000;
+            screensToAnimate.forEach(s => s.lookAt(camera.position.x, s.position.y, camera.position.z));
+            vipDisplaysToAnimate.forEach(v => v.userData.update && v.userData.update(timeSec));
+
+            if (controls.isLocked) {
+                const delta = (time - prevTime) / 1000;
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                direction.z = Number(moveF) - Number(moveB);
+                direction.x = Number(moveR) - Number(moveL);
+                direction.normalize();
+                if (moveF || moveB) velocity.z -= direction.z * 80.0 * delta;
+                if (moveL || moveR) velocity.x -= direction.x * 80.0 * delta;
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+                raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+                checkRaycast();
+            } else if (isMobile && document.getElementById('stand-modal').style.display !== 'flex') {
+                const speed = 0.5; const rotSpeed = 0.03;
+                if (moveVector.y !== 0 || moveVector.x !== 0) {
+                    controls.moveForward(moveVector.y * speed);
+                    controls.moveRight(moveVector.x * speed);
+                }
+                if (rotVector.x !== 0 || rotVector.y !== 0) {
+                    camera.rotation.y -= rotVector.x * rotSpeed;
+                }
+                raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+                checkRaycast();
+            }
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+
+        function checkRaycast() {
+            const intersects = raycaster.intersectObjects(interactables);
+            const btn = document.getElementById('mobile-interact-btn');
+            const msg = document.getElementById('interaction-msg');
+            const ch = document.getElementById('crosshair');
+
+            if (intersects.length > 0 && intersects[0].distance < 25) {
+                hovered = intersects[0].object;
+                if(isMobile) {
+                    btn.classList.add('active');
+                    btn.innerText = hovered.userData.data.pos.includes('exit') ? "SALIR" : "ABRIR";
+                } else {
+                    msg.style.display = 'block';
+                    msg.innerText = hovered.userData.data.pos.includes('exit') ? "CLIC PARA SALIR" : "CLIC PARA ABRIR";
+                    ch.style.transform = 'translate(-50%,-50%) scale(2)';
+                    ch.style.background = '#00d2ff';
+                }
+            } else {
+                hovered = null;
+                if(isMobile) {
+                    btn.classList.remove('active');
+                    btn.innerText = "VER";
+                } else {
+                    msg.style.display = 'none';
+                    ch.style.transform = 'translate(-50%,-50%) scale(1)';
+                    ch.style.background = 'rgba(255,255,255,0.8)';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

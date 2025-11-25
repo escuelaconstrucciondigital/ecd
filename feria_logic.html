@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feria 3D - Black Friday - Estilo Mazzanti</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Teko:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { margin: 0; overflow: hidden; background: #050510; font-family: 'Rajdhani', sans-serif; }
+        
+        #blocker {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(26, 26, 46, 0.95); 
+            z-index: 99; display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.5s;
+        }
+        
+        #start-btn {
+            padding: 15px 40px; font-size: 2rem; font-family: 'Teko'; 
+            background: #ff4400; color: white; border: none; cursor: pointer; 
+            text-transform: uppercase; letter-spacing: 2px;
+            box-shadow: 0 0 30px rgba(255, 68, 0, 0.5);
+        }
+
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 8px; height: 8px;
+            background: rgba(255, 255, 255, 0.8); border-radius: 50%; 
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 10;
+            transition: all 0.2s; border: 1px solid #000;
+        }
+        
+        #interaction-msg {
+            position: absolute; bottom: 15%; width: 100%; text-align: center;
+            color: #ff4400; font-size: 1.5rem; font-weight: bold; display: none; 
+            text-shadow: 0 0 10px rgba(0,0,0,0.8); font-family: 'Teko'; letter-spacing: 2px;
+        }
+
+        /* --- MODAL MEJORADO --- */
+        #stand-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px);
+        }
+        
+        .modal-card {
+            width: 85%; max-width: 1200px; height: 70vh; 
+            background: #000; 
+            border: none; 
+            display: flex; 
+            box-shadow: 0 0 80px rgba(255, 68, 0, 0.3);
+            position: relative; 
+            overflow: hidden; 
+        }
+
+        /* CINTAS ANIMADAS (MARQUEE) */
+        .marquee {
+            position: absolute;
+            background: #ff4400;
+            color: #000;
+            font-family: 'Teko', sans-serif;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            z-index: 10;
+            user-select: none;
+        }
+        
+        .marquee span {
+            white-space: nowrap;
+            padding: 0 20px;
+        }
+
+        .marquee.top { top: 0; left: 0; width: 100%; height: 30px; }
+        .marquee.top span { animation: scrollLeft 10s linear infinite; }
+
+        .marquee.bottom { bottom: 0; left: 0; width: 100%; height: 30px; }
+        .marquee.bottom span { animation: scrollRight 10s linear infinite; }
+
+        .marquee.left { top: 0; left: 0; width: 30px; height: 100%; flex-direction: column; justify-content: center;}
+        .marquee.left span { writing-mode: vertical-rl; transform: rotate(180deg); animation: scrollDown 10s linear infinite; padding: 20px 0; }
+
+        .marquee.right { top: 0; right: 0; width: 30px; height: 100%; flex-direction: column; justify-content: center;}
+        .marquee.right span { writing-mode: vertical-rl; transform: rotate(180deg); animation: scrollUp 10s linear infinite; padding: 20px 0; }
+
+        @keyframes scrollLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        @keyframes scrollRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes scrollDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        @keyframes scrollUp { from { transform: translateY(0); } to { transform: translateY(-100%); } }
+
+        .vid-container { 
+            flex: 2; background: #000; position: relative; display:flex; align-items:center; justify-content:center; 
+            margin: 30px 0 30px 30px; 
+        }
+        .vid-container iframe { width: 100%; height: 100%; border: none; }
+        
+        .info-container { 
+            flex: 1; padding: 40px; color: #ccc; position: relative; display: flex; 
+            flex-direction: column; justify-content: center; border-left: 1px solid #333; 
+            background: linear-gradient(135deg, #111 0%, #050505 100%);
+            margin: 30px 30px 30px 0; 
+        }
+        
+        .info-container h2 { color: #fff; font-family: 'Teko'; font-size: 4rem; margin: 0 0 30px 0; line-height: 0.9; text-transform: uppercase; color: #ff4400;}
+        
+        .close-btn { position: absolute; top: 0px; right: 10px; font-size: 3rem; color: #666; background: none; border: none; cursor: pointer; transition: 0.3s; z-index: 20; }
+        .close-btn:hover { color: #fff; }
+        
+        .btn-link { 
+            display: block; padding: 20px; text-align: center; font-weight: bold; text-decoration: none; 
+            margin-top: 20px; font-family: 'Teko'; font-size: 1.8rem; transition: 0.3s; letter-spacing: 1px;
+            border-radius: 4px; text-transform: uppercase;
+        }
+        .btn-buy { background: #ff4400; color: #000; border: none; }
+        .btn-buy:hover { background: #fff; box-shadow: 0 0 30px rgba(255, 68, 0, 0.8); }
+        .btn-doc { border: 1px solid #444; color: #888; background: transparent; }
+        .btn-doc:hover { border-color: #fff; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div id="blocker">
+        <button id="start-btn">ENTRAR A LA FERIA</button>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="interaction-msg">CLIC PARA ABRIR</div>
+
+    <div id="stand-modal">
+        <div class="modal-card">
+            <div class="marquee top">
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+            </div>
+            <div class="marquee bottom">
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+            </div>
+            <div class="marquee left">
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+            </div>
+            <div class="marquee right">
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+                <span>ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; ECD BLACK FRIDAY &nbsp;•&nbsp; </span>
+            </div>
+
+            <div class="vid-container" id="video-wrapper"></div>
+            <div class="info-container">
+                <button class="close-btn" onclick="closeModal()">×</button>
+                <h2 id="m-title">TITULO</h2>
+                <a id="m-buy" href="#" class="btn-link btn-buy" target="_blank">ACCEDER A LA OFERTA</a>
+                <a id="m-doc" href="#" class="btn-link btn-doc" target="_blank">DESCARGAR BROCHURE</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const IFRAME_TEMPLATE = (url) => `<iframe width="100%" height="100%" src="${url}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+        const V1 = "https://www.youtube-nocookie.com/embed/mZ_uPr7rHT4?si=s-docLxR3NVd3Q5T";
+        
+        const DATA = [
+            // IZQUIERDA
+            { t: "OFERTA BIM", pos: "left-back", type: 1, img: 'img/stand1.jpg', vid: V1, offer: "https://tusitio.com/bim-oferta", pdf: "https://tusitio.com/bim.pdf" },
+            { t: "SEGURIDAD BF", pos: "left-back", type: 2, img: 'img/stand2.jpg', vid: V1, offer: "https://tusitio.com/seguridad-oferta", pdf: "https://tusitio.com/seguridad.pdf" },
+            { t: "PACK RESIDENCIA", pos: "left-back", type: 3, img: 'img/stand3.jpg', vid: V1, offer: "#", pdf: "#" },
+            { t: "KIT TOPOGRAFÍA", pos: "left-front", type: 4, img: 'img/stand4.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "MAQUINARIA PRO", pos: "left-front", type: 5, img: 'img/stand5.jpg', vid: V1, offer: "#", pdf: "#" },
+
+            // DERECHA
+            { t: "PRECIOS BLACK", pos: "right-back", type: 2, img: 'img/stand6.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "LEAN EXPRESS", pos: "right-back", type: 1, img: 'img/stand7.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "ESTRUCTURAS", pos: "right-back", type: 5, img: 'img/stand8.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "INSTALACIONES", pos: "right-front", type: 3, img: 'img/stand9.jpg', vid: V1, offer: "#", pdf: "#" }, 
+            { t: "INTERVENTORÍA", pos: "right-front", type: 4, img: 'img/stand10.jpg', vid: V1, offer: "#", pdf: "#" }, 
+
+            // CENTRO
+            { t: "MEGA OFERTA", pos: "center", type: 'main', img: 'img/stand_principal.jpg', vid: V1, offer: "https://tusitio.com/mega-oferta", pdf: "https://tusitio.com/mega.pdf" },
+
+            // SALIDAS
+            { t: "SALIDA", pos: "exit-center", type: 'exit-main', img: 'img/salida_centro.jpg', link: "https://google.com" }, 
+            { t: "WEB", pos: "exit-left", type: 'exit-side', img: 'img/salida_izq.jpg', link: "#" }, 
+            { t: "CONTACTO", pos: "exit-right", type: 'exit-side', img: 'img/salida_der.jpg', link: "#" } 
+        ];
+
+        THREE.PointerLockControls=function(t,e){if(void 0===e&&(e=document.body),this.domElement=e,this.isLocked=!1,this.minPolarAngle=0,this.maxPolarAngle=Math.PI,this.pointerSpeed=1.0,!(t instanceof THREE.Camera))throw new Error("THREE.PointerLockControls: First parameter must be a camera.");var n=this,o={type:"change"},r={type:"lock"},i={type:"unlock"},c=new THREE.Euler(0,0,0,"YXZ"),s=Math.PI/2,a=new THREE.Vector3;function l(e){if(!1!==n.isLocked){var r=e.movementX||e.mozMovementX||e.webkitMovementX||0,i=e.movementY||e.mozMovementY||e.webkitMovementY||0;c.setFromQuaternion(t.quaternion),c.y-=r*.002*n.pointerSpeed,c.x-=i*.002*n.pointerSpeed,c.x=Math.max(s-n.maxPolarAngle,Math.min(s-n.minPolarAngle,c.x)),t.quaternion.setFromEuler(c),n.dispatchEvent(o)}}function u(){n.domElement.ownerDocument.pointerLockElement===n.domElement?(n.dispatchEvent(r),n.isLocked=!0):(n.dispatchEvent(i),n.isLocked=!1)}this.connect=function(){n.domElement.ownerDocument.addEventListener("mousemove",l,!1),n.domElement.ownerDocument.addEventListener("pointerlockchange",u,!1)},this.disconnect=function(){n.domElement.ownerDocument.removeEventListener("mousemove",l,!1),n.domElement.ownerDocument.removeEventListener("pointerlockchange",u,!1)},this.dispose=function(){this.disconnect()},this.getObject=function(){return t},this.getDirection=function(){var e=new THREE.Vector3(0,0,-1);return function(n){return n.copy(e).applyQuaternion(t.quaternion)}}(),this.moveForward=function(e){a.setFromMatrixColumn(t.matrix,0),a.crossVectors(t.up,a),t.position.addScaledVector(a,e)},this.moveRight=function(e){a.setFromMatrixColumn(t.matrix,0),t.position.addScaledVector(a,e)},this.lock=function(){this.domElement.requestPointerLock()},this.unlock=function(){n.domElement.ownerDocument.exitPointerLock()},this.connect()};THREE.PointerLockControls.prototype=Object.create(THREE.EventDispatcher.prototype),THREE.PointerLockControls.prototype.constructor=THREE.PointerLockControls;
+
+        let camera, scene, renderer, controls, raycaster;
+        let moveF=false, moveB=false, moveL=false, moveR=false;
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        const interactables = []; 
+        const screensToAnimate = []; 
+        const vipDisplaysToAnimate = []; 
+        let hovered = null; 
+        const textureLoader = new THREE.TextureLoader();
+        let lb=0, lf=0, rb=0, rf=0; 
+
+        // --- Funciones para texturas VIP ---
+        function createGoldCardTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024; canvas.height = 640; 
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 1024, 640);
+            gradient.addColorStop(0.0, '#f0d070'); gradient.addColorStop(0.3, '#e6c256'); 
+            gradient.addColorStop(0.5, '#fff4d0'); gradient.addColorStop(0.7, '#cfaa3d'); 
+            gradient.addColorStop(1.0, '#9e7e1e'); 
+            ctx.fillStyle = gradient; ctx.fillRect(0,0,1024,640);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            for(let i=0; i<1024; i+=8) { for(let j=0; j<640; j+=8) { if ((i+j)%16 === 0) { ctx.beginPath(); ctx.arc(i, j, 1.5, 0, Math.PI*2); ctx.fill(); }}}
+            ctx.fillStyle = '#000000'; ctx.textAlign = 'right'; ctx.font = 'bold 24px Arial'; ctx.fillText('Escuela de', 890, 80); ctx.font = 'bold 32px Arial'; ctx.fillText('CONSTRUCCIÓN', 890, 115); ctx.fillText('DIGITAL', 890, 150);
+            ctx.textAlign = 'left'; ctx.font = '60px Arial'; ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillText('MEMBRESÍA', 62, 442); ctx.fillStyle = '#ffffff'; ctx.fillText('MEMBRESÍA', 60, 440); ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.strokeText('MEMBRESÍA', 60, 440);
+            ctx.font = 'bold 160px Arial'; ctx.shadowColor = '#b8860b'; ctx.shadowBlur = 20; ctx.fillStyle = '#ffffff'; ctx.fillText('ECD VIP', 50, 580); ctx.shadowBlur = 0; ctx.fillStyle = '#ffffff'; ctx.fillText('ECD VIP', 50, 580); ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 3; ctx.strokeText('ECD VIP', 50, 580);
+            const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter; return tex;
+        }
+
+        function createBeamTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 512, 0, 0);
+            gradient.addColorStop(0, 'rgba(255, 170, 0, 0.0)'); gradient.addColorStop(0.3, 'rgba(255, 200, 0, 0.1)'); gradient.addColorStop(1, 'rgba(255, 255, 100, 0.4)'); 
+            ctx.fillStyle = gradient; ctx.fillRect(0,0,128,512); return new THREE.CanvasTexture(canvas);
+        }
+
+        const cardTexture = createGoldCardTexture();
+        const beamTexture = createBeamTexture();
+
+        // MATERIALES
+        const matBlackMetal = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.6 });
+        const matDarkStone = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+        const matNeonOrange = new THREE.MeshBasicMaterial({ color: 0xff4400 }); 
+        const matNeonWhite = new THREE.MeshBasicMaterial({ color: 0xffffff });  
+        const matNeonCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        const matWhiteFrame = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.2 }); 
+
+        // MATERIALES DEL ENTORNO (MAZZANTI)
+        const metalRoofMaterial = new THREE.MeshStandardMaterial({
+            color: 0xe0e0e0, roughness: 0.2, metalness: 0.9, side: THREE.DoubleSide, emissive: 0x111111 
+        });
+        const trussMaterial = new THREE.LineBasicMaterial({
+            color: 0xaaaaaa, linewidth: 1, opacity: 0.5, transparent: true
+        });
+        const innerStructureMat = new THREE.MeshBasicMaterial({
+            color: 0x666666, wireframe: true, transparent: true, opacity: 0.15
+        });
+        const lampMaterial = new THREE.MeshBasicMaterial({ color: 0xffddaa });
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510); // Fondo oscuro
+            scene.fog = new THREE.FogExp2(0x050510, 0.008);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.7, 30); 
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambient);
+            
+            const mainLight = new THREE.DirectionalLight(0x88aaff, 0.5);
+            mainLight.position.set(-50, 80, -30);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.left = -100;
+            mainLight.shadow.camera.right = 100;
+            mainLight.shadow.camera.top = 100;
+            mainLight.shadow.camera.bottom = -100;
+            scene.add(mainLight);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+            document.getElementById('start-btn').addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => document.getElementById('blocker').style.opacity = 0);
+            controls.addEventListener('unlock', () => {
+                if(document.getElementById('stand-modal').style.display !== 'flex') document.getElementById('blocker').style.opacity = 1;
+            });
+
+            document.addEventListener('keydown', (e) => onKey(e, true));
+            document.addEventListener('keyup', (e) => onKey(e, false));
+            document.addEventListener('click', onClick);
+            window.addEventListener('resize', onResize);
+            
+            raycaster = new THREE.Raycaster(); 
+
+            buildEnvironment(); 
+            buildLayout(); 
+        }
+
+        function onKey(e, v) {
+            switch(e.code) {
+                case 'KeyW': case 'ArrowUp': moveF = v; break;
+                case 'KeyS': case 'ArrowDown': moveB = v; break;
+                case 'KeyA': case 'ArrowLeft': moveL = v; break;
+                case 'KeyD': case 'ArrowRight': moveR = v; break;
+            }
+        }
+
+        // --- GEOMETRÍA DEL COLISEO (MAZZANTI) ---
+        function createRibbon(zPos, index, width) {
+            const organicNoise = Math.sin(index * 0.6) * 3.5; 
+            const randomVar = (Math.random() - 0.5) * 3.0; 
+            const hGround = 0;
+            const hShoulder = 8 + Math.random() * 1.5;
+            const hPeakBase = 20;
+            const hActualPeak = hPeakBase + organicNoise + randomVar;
+            const hLowSide = hActualPeak * 0.55; 
+            const isLeftLeaning = index % 2 === 0;
+            const peakShift = 14; 
+
+            let xPeak, xSlopeMid;
+            if (isLeftLeaning) {
+                xPeak = -peakShift + randomVar * 0.5;
+                xSlopeMid = 8; 
+            } else {
+                xPeak = peakShift + randomVar * 0.5;
+                xSlopeMid = -8;
+            }
+
+            const points = [];
+            points.push(new THREE.Vector3(-35, hGround, zPos)); 
+            points.push(new THREE.Vector3(-28, hShoulder, zPos));
+            if (isLeftLeaning) {
+                points.push(new THREE.Vector3(xPeak, hActualPeak, zPos));
+                points.push(new THREE.Vector3(xSlopeMid, hActualPeak * 0.8, zPos)); 
+                points.push(new THREE.Vector3(16, hLowSide, zPos));
+            } else {
+                points.push(new THREE.Vector3(-16, hLowSide, zPos));
+                points.push(new THREE.Vector3(xSlopeMid, hActualPeak * 0.8, zPos));
+                points.push(new THREE.Vector3(xPeak, hActualPeak, zPos));
+            }
+            points.push(new THREE.Vector3(28, hShoulder, zPos));
+            points.push(new THREE.Vector3(35, hGround, zPos));
+
+            const arcPath = new THREE.CatmullRomCurve3(points);
+            arcPath.tension = 0.45; 
+            
+            const shapeWidth = width - 0.3;
+            const shapeThickness = 0.9;     
+            const shape = new THREE.Shape();
+            shape.moveTo(-shapeWidth/2, -shapeThickness/2);
+            shape.lineTo( shapeWidth/2, -shapeThickness/2);
+            shape.lineTo( shapeWidth/2,  shapeThickness/2);
+            shape.lineTo(-shapeWidth/2,  shapeThickness/2);
+            shape.lineTo(-shapeWidth/2, -shapeThickness/2);
+
+            const extrudeSettings = { steps: 70, bevelEnabled: false, extrudePath: arcPath };
+            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            
+            const lightPoint1 = arcPath.getPoint(0.35);
+            const lightPoint2 = arcPath.getPoint(0.65);
+
+            return { geometry, curve: arcPath, lightPoints: [lightPoint1, lightPoint2] };
+        }
+
+        function createFacade(zPos, curve3D) {
+            const facadeGroup = new THREE.Group();
+            const divisions = 100; 
+            const points3D = curve3D.getPoints(divisions);
+            
+            const shapePoints = points3D.map(p => new THREE.Vector2(p.x, p.y));
+            if (shapePoints[0].y > 0.1) shapePoints.unshift(new THREE.Vector2(shapePoints[0].x, 0));
+            if (shapePoints[shapePoints.length-1].y > 0.1) shapePoints.push(new THREE.Vector2(shapePoints[shapePoints.length-1].x, 0));
+            const shape = new THREE.Shape(shapePoints);
+            
+            const glassGeo = new THREE.ShapeGeometry(shape);
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, metalness: 0.1, roughness: 0.05, transmission: 0.9,
+                transparent: true, thickness: 0.5, side: THREE.DoubleSide, reflectivity: 0.9, ior: 1.5
+            });
+            const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+            glassMesh.position.z = zPos;
+            facadeGroup.add(glassMesh);
+            
+            const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.4, metalness: 0.7 });
+            const borderPath = new THREE.CatmullRomCurve3(points3D.map(p => new THREE.Vector3(p.x, p.y, zPos)));
+            const borderGeo = new THREE.TubeGeometry(borderPath, 100, 0.3, 4, false);
+            const borderMesh = new THREE.Mesh(borderGeo, frameMaterial);
+            facadeGroup.add(borderMesh);
+            return facadeGroup;
+        }
+
+        function buildEnvironment() {
+            const planeGeometry = new THREE.PlaneGeometry(350, 350);
+            const planeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x1a1a2a, roughness: 0.9, metalness: 0.1
+            });
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -Math.PI / 2;
+            plane.receiveShadow = true;
+            scene.add(plane);
+
+            const gridHelper = new THREE.GridHelper(350, 70, 0x333344, 0x222233);
+            gridHelper.position.y = 0.01;
+            scene.add(gridHelper);
+
+            const group = new THREE.Group();
+            const numRibbons = 14; 
+            const galleryLength = 140; 
+            const ribbonWidth = galleryLength / numRibbons;
+            let firstCurve = null, lastCurve = null;
+
+            for (let i = 0; i < numRibbons; i++) {
+                const zPos = (i * ribbonWidth) - (galleryLength / 2) + (ribbonWidth / 2);
+                
+                const result = createRibbon(zPos, i, ribbonWidth);
+                const geometry = result.geometry;
+                const lightPoints = result.lightPoints;
+                
+                if (i === 0) firstCurve = result.curve;
+                if (i === numRibbons - 1) lastCurve = result.curve;
+                
+                const mesh = new THREE.Mesh(geometry, metalRoofMaterial);
+                mesh.castShadow = true; mesh.receiveShadow = true;
+                group.add(mesh);
+
+                const wireframeGeom = new THREE.WireframeGeometry(geometry);
+                const structure = new THREE.LineSegments(wireframeGeom, trussMaterial);
+                structure.scale.set(0.995, 0.995, 0.995);
+                group.add(structure);
+
+                const innerVol = new THREE.Mesh(geometry, innerStructureMat);
+                innerVol.scale.set(0.95, 0.95, 0.95);
+                group.add(innerVol);
+
+                lightPoints.forEach(point => {
+                    const interiorLight = new THREE.PointLight(0xffaa55, 2.0, 40); 
+                    interiorLight.position.set(point.x, point.y - 2.0, point.z);
+                    interiorLight.castShadow = false; 
+                    group.add(interiorLight);
+
+                    const lampGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                    const lampMesh = new THREE.Mesh(lampGeo, lampMaterial);
+                    lampMesh.position.copy(interiorLight.position);
+                    group.add(lampMesh);
+                });
+            }
+            if (firstCurve) group.add(createFacade(-(galleryLength / 2), firstCurve));
+            if (lastCurve) group.add(createFacade((galleryLength / 2), lastCurve));
+            
+            scene.add(group);
+        }
+
+        function createScreen(w, h, data) {
+            const finalW = 3.5; const finalH = 5.0;
+            let tex = data.img ? textureLoader.load(data.img) : null;
+            const mat = tex ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshBasicMaterial({ color: 0x444 });
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(finalW, finalH), mat);
+            mesh.userData = { data: data };
+            interactables.push(mesh);
+            screensToAnimate.push(mesh);
+            return mesh;
+        }
+        
+        function addLocalLight(group, color, intensity, distance, x, y, z) {
+            const light = new THREE.PointLight(color, intensity, distance);
+            light.position.set(x, y, z);
+            light.castShadow = false;
+            group.add(light);
+        }
+
+        // STANDS
+        function buildStandType1(group, data) {
+            for(let i=0; i<3; i++) {
+                const r = 3.5 - (i*0.5); const h = 0.2;
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 32), matBlackMetal);
+                base.position.y = i*h; base.receiveShadow = true; group.add(base);
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.02, 16, 32), matNeonOrange);
+                ring.rotation.x = Math.PI/2; ring.position.y = i*h + h/2; group.add(ring);
+            }
+            const archGeo = new THREE.TorusGeometry(3.2, 0.4, 6, 12, Math.PI * 1.2); 
+            const arch = new THREE.Mesh(archGeo, matDarkStone);
+            arch.rotation.z = 0.6; arch.position.y = 3.5; arch.castShadow = true; group.add(arch);
+            const archLight = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.05, 8, 32, Math.PI * 1.2), matNeonWhite);
+            archLight.rotation.z = 0.6; archLight.position.y = 3.5; group.add(archLight);
+            addLocalLight(group, 0xff6600, 0.8, 8, 0, 1, 0);
+            addLocalLight(group, 0xffffff, 0.6, 8, 0, 4, 0);
+            const screen = createScreen(null, null, data);
+            screen.position.set(0, 3.8, 0); group.add(screen);
+        }
+
+        function buildStandType2(group, data) {
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 0.3, 32), matBlackMetal);
+            base.position.y = 0.15; base.receiveShadow = true; group.add(base);
+            const baseRing = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.05, 16, 32), matNeonOrange);
+            baseRing.rotation.x = Math.PI/2; baseRing.position.y = 0.3; group.add(baseRing);
+            const bigRhombus = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.2, 8, 4), matWhiteFrame);
+            bigRhombus.rotation.z = 0; bigRhombus.position.set(0, 4.5, -0.5); bigRhombus.castShadow = true; group.add(bigRhombus);
+            const bigLight = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.05, 8, 4), matNeonWhite);
+            bigLight.rotation.z = 0; bigLight.position.set(0, 4.5, -0.4); group.add(bigLight);
+            const midRhombus = new THREE.Mesh(new THREE.TorusGeometry(3.8, 0.2, 8, 4), matWhiteFrame);
+            midRhombus.rotation.z = 0; midRhombus.position.set(0, 4.5, 0); midRhombus.castShadow = true; group.add(midRhombus);
+            const midLight = new THREE.Mesh(new THREE.TorusGeometry(3.8, 0.05, 8, 4), matNeonWhite);
+            midLight.rotation.z = 0; midLight.position.set(0, 4.5, 0.1); group.add(midLight);
+            addLocalLight(group, 0xff4400, 1.0, 10, 0, 1, 2);
+            addLocalLight(group, 0xffffff, 0.8, 10, 0, 5, 0);
+            const screen = createScreen(null, null, data);
+            screen.position.set(0, 4.2, 0.5); group.add(screen);
+        }
+
+        function buildStandType3(group, data) {
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.2, 0.3, 32), matDarkStone);
+            base.position.y = 0.15; base.receiveShadow = true; group.add(base);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(4, 0.05, 8, 32), matNeonOrange);
+            ring.rotation.x = Math.PI/2; ring.position.y = 0.3; group.add(ring);
+            for(let i=0; i<7; i++) {
+                const angle = (Math.PI/8) * (i - 3); 
+                const block = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.5), matBlackMetal);
+                block.position.set(Math.sin(angle)*3.5, 5.5 + Math.cos(angle)*1.8, 0);
+                block.lookAt(0, 3, 0); block.castShadow = true; group.add(block);
+                const lightStrip = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.52), matNeonWhite);
+                lightStrip.position.copy(block.position); lightStrip.lookAt(0, 3, 0); group.add(lightStrip);
+            }
+            addLocalLight(group, 0xff6600, 0.8, 8, 0, 1, 0);
+            addLocalLight(group, 0xffffff, 0.6, 8, 0, 4, 0);
+            const screen = createScreen(null, null, data);
+            screen.position.set(0, 3.5, 0); group.add(screen);
+        }
+
+        function buildStandType4(group, data) {
+            const baseH = 0.2;
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, baseH, 32), matBlackMetal);
+            base.position.y = baseH/2; base.receiveShadow = true; group.add(base);
+            const baseRing = new THREE.Mesh(new THREE.TorusGeometry(4, 0.05, 16, 32), matNeonOrange);
+            baseRing.rotation.x = Math.PI/2; baseRing.position.y = baseH + 0.05; group.add(baseRing);
+            const topH = 7.5; 
+            const proj = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 32), matBlackMetal);
+            proj.position.y = topH; group.add(proj);
+            const projRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.05, 16, 32), matNeonWhite);
+            projRing.rotation.x = Math.PI/2; projRing.position.y = topH - 0.15; group.add(projRing);
+            addLocalLight(group, 0xff4400, 1.2, 12, 0, 2, 0); 
+            addLocalLight(group, 0xffffff, 1.0, 10, 0, topH - 1, 0); 
+            const screen = createScreen(null, null, data);
+            screen.position.set(0, (topH/2) + 0.5, 0); 
+            screen.material.transparent = false; screen.material.opacity = 1.0;
+            group.add(screen);
+        }
+
+        function buildStandType5(group, data) {
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.5, 0.5, 32), matBlackMetal);
+            base.position.y = 0.25; base.receiveShadow = true; group.add(base);
+            const lightRing = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.05, 16, 32), matNeonOrange);
+            lightRing.rotation.x = Math.PI/2; lightRing.position.y = 0.25; group.add(lightRing);
+            for(let i=0; i<3; i++) {
+                const size = 4.5 - (i*0.8); 
+                const shapeGeo = new THREE.TorusGeometry(size, 0.1, 4, 4); 
+                const shape = new THREE.Mesh(shapeGeo, matNeonWhite);
+                shape.rotation.z = Math.PI/4; shape.position.set(0, 4.0, -i * 0.5);
+                shape.castShadow = true; group.add(shape);
+            }
+            addLocalLight(group, 0xff6600, 0.8, 8, 0, 1, 1);
+            addLocalLight(group, 0xffffff, 0.6, 8, 0, 4, 0);
+            const screen = createScreen(null, null, data);
+            screen.position.set(0, 4.0, 0); group.add(screen);
+        }
+
+        // --- NUEVA FUNCIÓN PARA DISPLAY VIP ---
+        function buildVIPDisplay(group, position) {
+            const vipGroup = new THREE.Group();
+            vipGroup.position.copy(position);
+            group.add(vipGroup);
+
+            const baseGeo = new THREE.CylinderGeometry(2.2, 2.5, 0.6, 64);
+            const base = new THREE.Mesh(baseGeo, matBlackMetal);
+            base.position.y = 0.3; vipGroup.add(base);
+            const neonGeo = new THREE.TorusGeometry(2.2, 0.05, 16, 100);
+            const neonMat = new THREE.MeshBasicMaterial({ color: 0xffd700 }); 
+            const neon = new THREE.Mesh(neonGeo, neonMat);
+            neon.rotation.x = Math.PI / 2; neon.position.y = 0.62; vipGroup.add(neon);
+            const light = new THREE.PointLight(0xffd700, 1.5, 8); light.position.set(0, 0.8, 0); light.castShadow = false; vipGroup.add(light);
+
+            const cardWrapper = new THREE.Group();
+            cardWrapper.position.y = 2.5; 
+            cardWrapper.rotation.x = Math.PI * 0.1;  
+            cardWrapper.rotation.z = Math.PI * 0.15; 
+            cardWrapper.rotation.y = -Math.PI * 0.1; 
+            vipGroup.add(cardWrapper);
+
+            const cardGroup = new THREE.Group(); cardWrapper.add(cardGroup);
+            const cardGeo = new THREE.PlaneGeometry(3.8 * 0.7, 2.4 * 0.7);
+
+            const mainCardMat = new THREE.MeshStandardMaterial({
+                map: cardTexture, roughness: 0.3, metalness: 0.6, side: THREE.DoubleSide, emissive: 0x332200, emissiveIntensity: 0.2
+            });
+            const mainCard = new THREE.Mesh(cardGeo, mainCardMat); cardGroup.add(mainCard);
+
+            const layerMat = new THREE.MeshBasicMaterial({
+                map: cardTexture, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, color: 0xffcc00 
+            });
+            for(let i=1; i<=4; i++) {
+                const layer = new THREE.Mesh(cardGeo, layerMat);
+                layer.position.z = -i * 0.12 * 0.7; layer.scale.multiplyScalar(1.0 + i * 0.04); cardGroup.add(layer);
+            }
+            const scanBar = new THREE.Mesh(new THREE.PlaneGeometry(4.2 * 0.7, 0.08 * 0.7), new THREE.MeshBasicMaterial({
+                color: 0xffffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
+            })); cardGroup.add(scanBar);
+
+            const beamMesh = new THREE.Mesh(new THREE.ConeGeometry(2.5 * 0.7, 4.0 * 0.7, 32, 1, true), new THREE.MeshBasicMaterial({
+                map: beamTexture, transparent: true, opacity: 0.25, color: 0xffaa00, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
+            }));
+            beamMesh.position.y = -0.5 * 0.7; beamMesh.rotation.x = Math.PI; cardWrapper.add(beamMesh);
+
+            const particlesGeo = new THREE.BufferGeometry();
+            const pCount = 150; const pPos = new Float32Array(pCount * 3);
+            for(let i=0; i<pCount*3; i++) pPos[i] = (Math.random()-0.5)*5; 
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const particlesMat = new THREE.PointsMaterial({ color: 0xffcc00, size: 0.03, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+            const particleSystem = new THREE.Points(particlesGeo, particlesMat); particleSystem.position.y = 2.5; vipGroup.add(particleSystem);
+
+            vipGroup.userData.update = function(time) {
+                vipGroup.rotation.y = time * 0.5;
+                cardGroup.position.z = Math.sin(time * 1.5) * 0.05; 
+                const scanY = (time * 1.5) % 3.0 - 1.5; scanBar.position.y = scanY * 0.7; scanBar.visible = Math.abs(scanY) < 1.3;
+                beamMesh.material.opacity = 0.2 + Math.sin(time * 8) * 0.05;
+            };
+            vipDisplaysToAnimate.push(vipGroup);
+        }
+
+        function buildMainStand(group, data) { // Principal MODIFICADO (Sin muro trasero)
+            // Se ha eliminado el muro (wall) y los marcos de luz traseros.
+            // Solo queda la base y la pantalla flotante.
+
+            // Base simple para marcar el sitio (opcional, pero ayuda a anclar)
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.2, 32), matBlackMetal);
+            base.position.y = 0.1; base.receiveShadow = true; group.add(base);
+            const baseLight = new THREE.Mesh(new THREE.TorusGeometry(5, 0.05, 16, 32), matNeonOrange);
+            baseLight.rotation.x = Math.PI/2; baseLight.position.y = 0.2; group.add(baseLight);
+
+            // Luces ambientales del stand (flotando para iluminar la zona)
+            addLocalLight(group, 0xff6600, 0.8, 20, 0, 2, 5);
+            
+            // PANTALLA GIGANTE FLOTANTE (Más grande: 12x8)
+            let tex = data.img ? textureLoader.load(data.img) : null;
+            const mat = tex ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshBasicMaterial({ color: 0x555 });
+            const screen = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), mat); 
+            screen.position.set(0, 6, 0); // Elevada para que se vea imponente
+            screen.userData = { data: data };
+            interactables.push(screen);
+            screensToAnimate.push(screen); // Mantiene el efecto Billboard
+            group.add(screen);
+
+            // DISPLAYS VIP A LOS LADOS
+            buildVIPDisplay(group, new THREE.Vector3(-8, 0, 3));
+            buildVIPDisplay(group, new THREE.Vector3(8, 0, 3));
+        }
+        
+        function createSalidaSignTexture() {
+            const cvs = document.createElement('canvas'); cvs.width=512; cvs.height=128;
+            const ctx = cvs.getContext('2d');
+            ctx.fillStyle = '#111'; ctx.fillRect(0,0,512,128);
+            ctx.strokeStyle = '#00d2ff'; ctx.lineWidth = 8; ctx.strokeRect(4,4,504,120);
+            ctx.fillStyle = '#00d2ff'; ctx.font = 'bold 80px "Teko", sans-serif'; 
+            ctx.textAlign = 'center'; ctx.textBaseline='middle';
+            ctx.fillText("SALIDA", 256, 64);
+            return new THREE.CanvasTexture(cvs);
+        }
+
+        function buildDetailedMainExit(group, data) { 
+            const matDarkMetal = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.5 });
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
+            const stepGeo = new THREE.BoxGeometry(12, 0.4, 3);
+            const step = new THREE.Mesh(stepGeo, matFloor);
+            step.position.set(0, 0.2, 1.5); group.add(step);
+            const edge = new THREE.Mesh(new THREE.BoxGeometry(12, 0.05, 0.05), matNeonOrange); 
+            edge.position.set(0, 0.4, 3); group.add(edge);
+            const frameHeight = 7; const frameZ = 3.5;
+            const pilarGeo = new THREE.BoxGeometry(0.8, frameHeight, 0.8);
+            const pilarL = new THREE.Mesh(pilarGeo, matDarkMetal); pilarL.position.set(-5, frameHeight/2 + 0.4, frameZ); group.add(pilarL);
+            const pilarR = new THREE.Mesh(pilarGeo, matDarkMetal); pilarR.position.set(5, frameHeight/2 + 0.4, frameZ); group.add(pilarR);
+            const topBar = new THREE.Mesh(new THREE.BoxGeometry(10.8, 0.8, 0.8), matDarkMetal); 
+            topBar.position.set(0, frameHeight + 0.4, frameZ); group.add(topBar);
+            const neonL = new THREE.Mesh(new THREE.BoxGeometry(0.1, frameHeight, 0.1), matNeonWhite); neonL.position.set(-4.6, frameHeight/2 + 0.4, frameZ + 0.4); group.add(neonL); 
+            const neonR = new THREE.Mesh(new THREE.BoxGeometry(0.1, frameHeight, 0.1), matNeonWhite); neonR.position.set(4.6, frameHeight/2 + 0.4, frameZ + 0.4); group.add(neonR); 
+            const neonT = new THREE.Mesh(new THREE.BoxGeometry(10, 0.1, 0.1), matNeonWhite); neonT.position.set(0, frameHeight + 0.4 - 0.4, frameZ + 0.4); group.add(neonT); 
+
+            const signBox = new THREE.Mesh(new THREE.BoxGeometry(4, 1.2, 0.2), matDarkMetal); 
+            signBox.position.set(0, frameHeight + 1.4, frameZ); group.add(signBox);
+            const signTex = createSalidaSignTexture();
+            const signPlane = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 1.0), new THREE.MeshBasicMaterial({map: signTex, transparent: true}));
+            signPlane.position.set(0, frameHeight + 1.4, frameZ + 0.11); group.add(signPlane);
+
+            const portalWidth = 9; const portalHeight = 6;
+            const portalTex = textureLoader.load(data.img);
+            const portal = new THREE.Mesh(new THREE.PlaneGeometry(portalWidth, portalHeight), new THREE.MeshBasicMaterial({ map: portalTex }));
+            portal.position.set(0, frameHeight/2 + 0.9, frameZ - 0.5); 
+            portal.userData = { data: data }; interactables.push(portal); group.add(portal);
+            addLocalLight(group, 0xffffff, 1, 15, 0, frameHeight/2, frameZ + 2);
+        }
+
+        function buildDetailedSideExit(group, data) { 
+            const matDarkMetal = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.3, metalness: 0.4 }); 
+            const matFloor = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5 });
+            const basePlatform = new THREE.Mesh(new THREE.BoxGeometry(9, 0.3, 2.5), matFloor);
+            basePlatform.position.set(0, 0.15, 0); group.add(basePlatform);
+            const baseEdge = new THREE.Mesh(new THREE.BoxGeometry(9, 0.05, 0.05), matNeonOrange); 
+            baseEdge.position.set(0, 0.3, 1.25); group.add(baseEdge);
+
+            const archHeight = 6; const archWidth = 7;
+            const pilarGeo = new THREE.CylinderGeometry(0.5, 0.5, archHeight, 16);
+            const pilarL = new THREE.Mesh(pilarGeo, matDarkMetal); pilarL.position.set(-archWidth/2, archHeight/2 + 0.3, 0); group.add(pilarL);
+            const pilarR = new THREE.Mesh(pilarGeo, matDarkMetal); pilarR.position.set(archWidth/2, archHeight/2 + 0.3, 0); group.add(pilarR);
+            const archTop = new THREE.Mesh(new THREE.TorusGeometry(archWidth/2, 0.5, 16, 32, Math.PI), matDarkMetal);
+            archTop.position.set(0, archHeight/2 + 0.3, 0); archTop.rotation.z = Math.PI; group.add(archTop);
+
+            const ringGeo = new THREE.TorusGeometry(0.55, 0.05, 8, 16);
+            for(let y=2; y<archHeight; y+=2) {
+                const ringL = new THREE.Mesh(ringGeo, matNeonWhite); ringL.rotation.x = Math.PI/2; ringL.position.set(-archWidth/2, y + 0.3, 0); group.add(ringL); 
+                const ringR = new THREE.Mesh(ringGeo, matNeonWhite); ringR.rotation.x = Math.PI/2; ringR.position.set(archWidth/2, y + 0.3, 0); group.add(ringR); 
+            }
+            const archNeon = new THREE.Mesh(new THREE.TorusGeometry(archWidth/2, 0.05, 8, 32, Math.PI), matNeonWhite); 
+            archNeon.position.set(0, archHeight/2 + 0.3, 0.6); archNeon.rotation.z = Math.PI; group.add(archNeon); 
+
+            const portalW = archWidth - 1; const portalH = archHeight + (archWidth/2) - 1; 
+            const portalTex = textureLoader.load(data.img);
+            const portal = new THREE.Mesh(new THREE.PlaneGeometry(portalW, portalH*0.8), new THREE.MeshBasicMaterial({ map: portalTex }));
+            portal.position.set(0, portalH*0.4 + 0.8, -0.5); 
+            portal.userData = { data: data }; interactables.push(portal); group.add(portal);
+            addLocalLight(group, 0xffffff, 0.8, 12, 0, archHeight/2, 2);
+        }
+
+        function buildLayout() {
+            DATA.forEach(d => {
+                const group = new THREE.Group();
+                let x=0, z=0, rot=0;
+                if(d.pos === 'left-back') { z = 12 - (lb++ * 14); x = -15; rot = Math.PI/4; } 
+                else if (d.pos === 'left-front') { z = 6 - (lf++ * 14); x = -8; rot = Math.PI/6; } 
+                else if(d.pos === 'right-back') { z = 12 - (rb++ * 14); x = 15; rot = -Math.PI/4; } 
+                else if(d.pos === 'right-front') { z = 6 - (rf++ * 14); x = 8; rot = -Math.PI/6; } 
+                else if(d.pos === 'center') { x = 0; z = -40; rot = 0; } 
+                else if(d.pos.includes('exit')) {
+                    z = 45; rot = Math.PI; 
+                    if(d.pos.includes('center')) x=0;
+                    if(d.pos.includes('left')) x=-12; 
+                    if(d.pos.includes('right')) x=12; 
+                }
+                group.position.set(x, 0, z);
+                group.rotation.y = rot;
+                if(d.type === 1) buildStandType1(group, d);
+                else if(d.type === 2) buildStandType2(group, d);
+                else if(d.type === 3) buildStandType3(group, d);
+                else if(d.type === 4) buildStandType4(group, d);
+                else if(d.type === 5) buildStandType5(group, d);
+                else if(d.type === 'main') buildMainStand(group, d);
+                else if(d.type === 'exit-main') buildDetailedMainExit(group, d);
+                else if(d.type === 'exit-side') buildDetailedSideExit(group, d);
+                scene.add(group);
+            });
+        }
+
+        function onClick() {
+            if(controls.isLocked && hovered) {
+                const d = hovered.userData.data;
+                if(d.pos.includes('exit')) { window.open(d.link || '#', '_blank'); } 
+                else { openModal(d); controls.unlock(); }
+            }
+        }
+
+        function openModal(d) {
+            document.getElementById('m-title').innerText = d.t;
+            const btnBuy = document.getElementById('m-buy');
+            btnBuy.href = d.offer || "#";
+            const btnDoc = document.getElementById('m-doc');
+            btnDoc.href = d.pdf || "#";
+            const content = d.vid ? IFRAME_TEMPLATE(d.vid) : '<h2 style="color:white;">VIDEO PENDIENTE</h2>';
+            document.getElementById('video-wrapper').innerHTML = content;
+            document.getElementById('stand-modal').style.display = 'flex';
+        }
+
+        window.closeModal = function() {
+            document.getElementById('stand-modal').style.display = 'none';
+            document.getElementById('video-wrapper').innerHTML = '';
+            controls.lock(); 
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            const timeSec = time / 1000;
+
+            screensToAnimate.forEach(screen => {
+                screen.lookAt(camera.position.x, screen.position.y, camera.position.z);
+            });
+
+            vipDisplaysToAnimate.forEach(vipDisplay => {
+                if (vipDisplay.userData.update) {
+                    vipDisplay.userData.update(timeSec);
+                }
+            });
+
+            if(controls.isLocked) {
+                raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+                const intersects = raycaster.intersectObjects(interactables);
+                const msg = document.getElementById('interaction-msg');
+                const ch = document.getElementById('crosshair');
+                if(intersects.length > 0 && intersects[0].distance < 20) {
+                    hovered = intersects[0].object;
+                    msg.style.display = 'block';
+                    ch.style.transform = 'translate(-50%,-50%) scale(2)';
+                    ch.style.background = '#00d2ff'; 
+                    ch.style.border = 'none';
+                    if(hovered.userData.data.pos.includes('exit')) msg.innerText = "CLIC PARA SALIR";
+                    else msg.innerText = "CLIC PARA ABRIR";
+                } else {
+                    hovered = null;
+                    msg.style.display = 'none';
+                    ch.style.transform = 'translate(-50%,-50%) scale(1)';
+                    ch.style.background = 'rgba(255,255,255,0.6)'; 
+                    ch.style.border = '1px solid #fff';
+                }
+                const delta = (time - prevTime) / 1000;
+                velocity.x -= velocity.x * 10.0 * delta; 
+                velocity.z -= velocity.z * 10.0 * delta;
+                direction.z = Number(moveF) - Number(moveB);
+                direction.x = Number(moveR) - Number(moveL); 
+                direction.normalize();
+                if (moveF || moveB) velocity.z -= direction.z * 80.0 * delta; 
+                if (moveL || moveR) velocity.x -= direction.x * 80.0 * delta;
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+            }
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

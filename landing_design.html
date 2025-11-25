@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diseño Landing - Black Friday</title>
+    <!-- Fuentes de Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Teko:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CSS DEL LANDING --- */
+        body { margin: 0; overflow: hidden; background: #050510; font-family: 'Rajdhani', sans-serif; }
+        
+        /* Pantalla de bloqueo (Landing Screen) */
+        #blocker {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            
+            /* IMAGEN DE FONDO */
+            background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)), url('img/portada.jpg');
+            background-size: cover; 
+            background-position: center;
+            background-repeat: no-repeat;
+            
+            z-index: 99; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #fff; 
+            overflow: hidden;
+            transition: opacity 0.5s; /* Para cuando lo unamos */
+        }
+
+        /* FONDO ANIMADO (CINTAS) */
+        .bg-tape-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; z-index: 0; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transform: rotate(-10deg) scale(1.2); 
+        }
+
+        .tape-line {
+            width: 200%; font-family: 'Teko', sans-serif; font-size: 8vh; font-weight: 700;
+            color: rgba(255, 255, 255, 0.04); white-space: nowrap; margin: 1vh 0;
+            text-transform: uppercase; letter-spacing: 5px; user-select: none;
+        }
+
+        .move-left { animation: scrollTextLeft 60s linear infinite; }
+        .move-right { animation: scrollTextRight 60s linear infinite; }
+
+        @keyframes scrollTextLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-25%); } }
+        @keyframes scrollTextRight { 0% { transform: translateX(-25%); } 100% { transform: translateX(0); } }
+
+        /* CONTENEDOR LOGOS SUPERIORES */
+        #top-logos-container {
+            position: absolute; top: 40px; width: 100%; max-width: 1400px; 
+            display: flex; justify-content: space-between; padding: 0 40px; 
+            box-sizing: border-box; z-index: 101;
+        }
+
+        .corner-logo {
+            width: 18vw; max-width: 280px; min-width: 140px; height: auto;     
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); transition: transform 0.3s ease;
+        }
+        .corner-logo:hover { transform: scale(1.05); }
+
+        /* LOGO PRINCIPAL */
+        #main-logo {
+            width: 50vw; max-width: 1200px; height: auto; margin-bottom: 10px;
+            filter: drop-shadow(0 0 30px rgba(255, 68, 0, 0.6)); 
+            animation: float 3s ease-in-out infinite; position: relative; z-index: 102;
+        }
+
+        /* SUBTÍTULO */
+        #main-subtitle {
+            font-family: 'Teko', sans-serif; font-size: 2rem; color: #fff; text-align: center;
+            margin-bottom: 30px; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 255, 255, 0.4);
+            letter-spacing: 4px; position: relative; z-index: 102; font-weight: 500;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); }
+        }
+
+        .instructions {
+            border: 1px solid rgba(255, 255, 255, 0.2); padding: 20px 40px; 
+            background: rgba(0, 0, 0, 0.85); margin-top: 10px; border-radius: 50px; 
+            text-align: center; color: #ccc; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px); font-size: 1rem; letter-spacing: 1px; position: relative; z-index: 102;
+        }
+        .key { border: 1px solid #ff4400; padding: 2px 8px; border-radius: 4px; font-weight: bold; color: #ff4400; }
+        
+        #start-btn {
+            margin-top: 50px; padding: 20px 70px; font-size: 3rem; font-family: 'Teko', sans-serif;
+            background: #ff4400; border: none; color: #000; cursor: pointer; font-weight: 700; 
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase; letter-spacing: 4px; box-shadow: 0 0 40px rgba(255, 68, 0, 0.4);
+            border-radius: 5px; position: relative; z-index: 102;
+        }
+        #start-btn:hover { 
+            background: #fff; color: #ff4400; box-shadow: 0 0 60px rgba(255, 68, 0, 0.8); 
+            transform: scale(1.1) rotate(-1deg);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CONTENIDO DEL LANDING -->
+    <div id="blocker">
+        <!-- Cintas de fondo -->
+        <div class="bg-tape-container">
+            <div class="tape-line move-left">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-right">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-left">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-right">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+            <div class="tape-line move-left">HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO &nbsp;&nbsp; HASTA EL 60% DE DESCUENTO</div>
+        </div>
+
+        <!-- Logos Superiores -->
+        <div id="top-logos-container">
+            <img id="logo-left" class="corner-logo" src="img/Logo01.png" alt="Logo Izquierda">
+            <img id="logo-right" class="corner-logo" src="img/Logo02.png" alt="Logo Derecha">
+        </div>
+
+        <!-- Logo Central -->
+        <img id="main-logo" src="img/texto_black.png" alt="LLEGÓ EL BLACK FRIDAY">
+        <h3 id="main-subtitle">PROGRAMAS, CURSOS Y MEMBRESÍA</h3>
+
+        <div class="instructions">
+            <p><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> MOVERSE &nbsp;|&nbsp; MOUSE - MIRAR &nbsp;|&nbsp; CLIC - ABRIR</p>
+        </div>
+        <button id="start-btn">¿ESTÁS LISTO?</button>
+    </div>
+
+    <script>
+        // Simulación simple para probar el botón
+        document.getElementById('start-btn').addEventListener('click', () => {
+            alert("¡Botón funciona! Aquí se iniciaría el 3D.");
+            // document.getElementById('blocker').style.opacity = 0; // Descomentar para probar desvanecimiento
+        });
+    </script>
+</body>
+</html>
